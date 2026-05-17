@@ -20,8 +20,8 @@ public class FluidBridge : MonoBehaviour
         }
         rawParticles = new FluidParticle[particleCount];
         for (int i = 0; i < particleCount; i++) {
-            rawParticles[i].position = new float2(Random.Range(-5f, 5f), Random.Range(-5f, 5f));
-            rawParticles[i].velocity = new float2(0f, 0f);
+            rawParticles[i].position = new Vector2(Random.Range(-5f, 5f), Random.Range(-5f, 5f));
+            rawParticles[i].velocity = new Vector2(0f, 0f);
             rawParticles[i].type = (i % 2 == 0) ? 0.0f : 1.0f;
         }
         int stride = Marshal.SizeOf(typeof(FluidParticle));
