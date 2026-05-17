@@ -67,6 +67,6 @@
         "*.sln": "*.csproj",
         "*.slnx": "*.csproj"
     },
-    "dotnet.defaultSolution": "Poseidon.slnx",
+    "dotnet.defaultSolution": "MVP.slnx",
     "dotnet.enableWorkspaceBasedDevelopment": false
 }
