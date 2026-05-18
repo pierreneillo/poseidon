@@ -1,0 +1,12 @@
+fileFormatVersion: 2
+guid: 3c3e32e54c68eb063b465dc128d99552
+MonoImporter:
+  externalObjects: {}
+  serializedVersion: 2
+  defaultReferences:
+  - waterParticlePrefab: {fileID: 576459050816251157, guid: 509f744297890148eb99b6532e532b72, type: 3}
+  executionOrder: 0
+  icon: {instanceID: 0}
+  userData: 
+  assetBundleName: 
+  assetBundleVariant: 
