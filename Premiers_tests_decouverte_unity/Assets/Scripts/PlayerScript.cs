@@ -25,9 +25,11 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Enable();	// Makes it possible to use actions inside action maps in Unity (predefined actions of the rendering engine) => we find in action maps : Player -> lot of actions (for instance Player -> Move for next line) ; thus we setup settings
 		actions.Player.Move.performed += Movement;	// Assign the Method "Movement" written below to the performance of a movement
 		actions.Player.Jump.performed += Jumping;	// Same thing with "Jumping"
-		
+		actions.Player.SpecialAttack1.performed += SpecialAttack1;
+
 		actions.Player.Move.canceled += Movement;
 		actions.Player.Jump.canceled += Jumping;
+		actions.Player.SpecialAttack1.canceled += SpecialAttack1;
 	}
 	
 	// Opposite of OnEnable() -> cleaning usage (otherwise, the OnEnable() may be triggered once, then twice, ... then 10 times without freeing memory...)
@@ -36,6 +38,7 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Disable();	
 		actions.Player.Move.performed -= Movement;	
 		actions.Player.Jump.performed -= Jumping;
+		actions.Player.SpecialAttack1.performed -= SpecialAttack1;
 	}
 	
 	
@@ -52,6 +55,13 @@ public class PlayerScript : MonoBehaviour
 	{
 		if(ctx.performed){			// Otherwise, the action occur when we trigger the space bar... and when we release it !
 			rb.linearVelocityY = jumpForce;
+		}
+	}
+
+	void SpecialAttack1(InputAction.CallbackContext ctx)
+	{
+		if(ctx.performed){
+			rb.linearVelocityY = -jumpForce;
 		}
 	}
 	

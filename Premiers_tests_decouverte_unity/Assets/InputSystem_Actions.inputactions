@@ -28,7 +28,7 @@
                     "name": "Attack",
                     "type": "Button",
                     "id": "6c2ab1b8-8984-453a-af3d-a3c78ae1679a",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -37,7 +37,7 @@
                     "name": "Interact",
                     "type": "Button",
                     "id": "852140f2-7766-474d-8707-702459ba45f3",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "Hold",
                     "initialStateCheck": false
@@ -64,7 +64,7 @@
                     "name": "Previous",
                     "type": "Button",
                     "id": "2776c80d-3c14-4091-8c56-d04ced07a2b0",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -88,9 +88,18 @@
                     "initialStateCheck": false
                 },
                 {
-                    "name": "SpecialAttacks",
+                    "name": "SpecialAttack1",
                     "type": "Button",
                     "id": "b73e7beb-0fcb-4bd1-8a7a-a61030c1a5cc",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                },
+                {
+                    "name": "SpecialAttack2",
+                    "type": "Button",
+                    "id": "cce87409-5b43-477d-8b37-9e14bc00082d",
                     "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
@@ -485,12 +494,23 @@
                 },
                 {
                     "name": "",
-                    "id": "b9f3240b-b611-4075-895d-e8da1e97eb11",
-                    "path": "",
+                    "id": "de3d5548-55e4-41d5-9168-24b58b55bc22",
+                    "path": "<Keyboard>/1",
                     "interactions": "",
                     "processors": "",
-                    "groups": "",
-                    "action": "SpecialAttacks",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "SpecialAttack1",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "2b63c8d9-2775-4ea3-b738-bd51433bc712",
+                    "path": "<Keyboard>/2",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": ";Keyboard&Mouse",
+                    "action": "SpecialAttack2",
                     "isComposite": false,
                     "isPartOfComposite": false
                 }

@@ -114,7 +114,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Attack"",
                     ""type"": ""Button"",
                     ""id"": ""6c2ab1b8-8984-453a-af3d-a3c78ae1679a"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -123,7 +123,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Interact"",
                     ""type"": ""Button"",
                     ""id"": ""852140f2-7766-474d-8707-702459ba45f3"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": ""Hold"",
                     ""initialStateCheck"": false
@@ -150,7 +150,7 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""name"": ""Previous"",
                     ""type"": ""Button"",
                     ""id"": ""2776c80d-3c14-4091-8c56-d04ced07a2b0"",
-                    ""expectedControlType"": ""Button"",
+                    ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
@@ -174,9 +174,18 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                     ""initialStateCheck"": false
                 },
                 {
-                    ""name"": ""SpecialAttacks"",
+                    ""name"": ""SpecialAttack1"",
                     ""type"": ""Button"",
                     ""id"": ""b73e7beb-0fcb-4bd1-8a7a-a61030c1a5cc"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""SpecialAttack2"",
+                    ""type"": ""Button"",
+                    ""id"": ""cce87409-5b43-477d-8b37-9e14bc00082d"",
                     ""expectedControlType"": """",
                     ""processors"": """",
                     ""interactions"": """",
@@ -571,12 +580,23 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
                 },
                 {
                     ""name"": """",
-                    ""id"": ""b9f3240b-b611-4075-895d-e8da1e97eb11"",
-                    ""path"": """",
+                    ""id"": ""de3d5548-55e4-41d5-9168-24b58b55bc22"",
+                    ""path"": ""<Keyboard>/1"",
                     ""interactions"": """",
                     ""processors"": """",
-                    ""groups"": """",
-                    ""action"": ""SpecialAttacks"",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""SpecialAttack1"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""2b63c8d9-2775-4ea3-b738-bd51433bc712"",
+                    ""path"": ""<Keyboard>/2"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": "";Keyboard&Mouse"",
+                    ""action"": ""SpecialAttack2"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
                 }
@@ -1173,7 +1193,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         m_Player_Previous = m_Player.FindAction("Previous", throwIfNotFound: true);
         m_Player_Next = m_Player.FindAction("Next", throwIfNotFound: true);
         m_Player_Sprint = m_Player.FindAction("Sprint", throwIfNotFound: true);
-        m_Player_SpecialAttacks = m_Player.FindAction("SpecialAttacks", throwIfNotFound: true);
+        m_Player_SpecialAttack1 = m_Player.FindAction("SpecialAttack1", throwIfNotFound: true);
+        m_Player_SpecialAttack2 = m_Player.FindAction("SpecialAttack2", throwIfNotFound: true);
         // UI
         m_UI = asset.FindActionMap("UI", throwIfNotFound: true);
         m_UI_Navigate = m_UI.FindAction("Navigate", throwIfNotFound: true);
@@ -1276,7 +1297,8 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Previous;
     private readonly InputAction m_Player_Next;
     private readonly InputAction m_Player_Sprint;
-    private readonly InputAction m_Player_SpecialAttacks;
+    private readonly InputAction m_Player_SpecialAttack1;
+    private readonly InputAction m_Player_SpecialAttack2;
     /// <summary>
     /// Provides access to input actions defined in input action map "Player".
     /// </summary>
@@ -1325,9 +1347,13 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// </summary>
         public InputAction @Sprint => m_Wrapper.m_Player_Sprint;
         /// <summary>
-        /// Provides access to the underlying input action "Player/SpecialAttacks".
+        /// Provides access to the underlying input action "Player/SpecialAttack1".
         /// </summary>
-        public InputAction @SpecialAttacks => m_Wrapper.m_Player_SpecialAttacks;
+        public InputAction @SpecialAttack1 => m_Wrapper.m_Player_SpecialAttack1;
+        /// <summary>
+        /// Provides access to the underlying input action "Player/SpecialAttack2".
+        /// </summary>
+        public InputAction @SpecialAttack2 => m_Wrapper.m_Player_SpecialAttack2;
         /// <summary>
         /// Provides access to the underlying input action map instance.
         /// </summary>
@@ -1381,9 +1407,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Sprint.started += instance.OnSprint;
             @Sprint.performed += instance.OnSprint;
             @Sprint.canceled += instance.OnSprint;
-            @SpecialAttacks.started += instance.OnSpecialAttacks;
-            @SpecialAttacks.performed += instance.OnSpecialAttacks;
-            @SpecialAttacks.canceled += instance.OnSpecialAttacks;
+            @SpecialAttack1.started += instance.OnSpecialAttack1;
+            @SpecialAttack1.performed += instance.OnSpecialAttack1;
+            @SpecialAttack1.canceled += instance.OnSpecialAttack1;
+            @SpecialAttack2.started += instance.OnSpecialAttack2;
+            @SpecialAttack2.performed += instance.OnSpecialAttack2;
+            @SpecialAttack2.canceled += instance.OnSpecialAttack2;
         }
 
         /// <summary>
@@ -1422,9 +1451,12 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
             @Sprint.started -= instance.OnSprint;
             @Sprint.performed -= instance.OnSprint;
             @Sprint.canceled -= instance.OnSprint;
-            @SpecialAttacks.started -= instance.OnSpecialAttacks;
-            @SpecialAttacks.performed -= instance.OnSpecialAttacks;
-            @SpecialAttacks.canceled -= instance.OnSpecialAttacks;
+            @SpecialAttack1.started -= instance.OnSpecialAttack1;
+            @SpecialAttack1.performed -= instance.OnSpecialAttack1;
+            @SpecialAttack1.canceled -= instance.OnSpecialAttack1;
+            @SpecialAttack2.started -= instance.OnSpecialAttack2;
+            @SpecialAttack2.performed -= instance.OnSpecialAttack2;
+            @SpecialAttack2.canceled -= instance.OnSpecialAttack2;
         }
 
         /// <summary>
@@ -1789,12 +1821,19 @@ public partial class @InputSystem_Actions: IInputActionCollection2, IDisposable
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
         void OnSprint(InputAction.CallbackContext context);
         /// <summary>
-        /// Method invoked when associated input action "SpecialAttacks" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// Method invoked when associated input action "SpecialAttack1" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
         /// </summary>
         /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
         /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
-        void OnSpecialAttacks(InputAction.CallbackContext context);
+        void OnSpecialAttack1(InputAction.CallbackContext context);
+        /// <summary>
+        /// Method invoked when associated input action "SpecialAttack2" is either <see cref="UnityEngine.InputSystem.InputAction.started" />, <see cref="UnityEngine.InputSystem.InputAction.performed" /> or <see cref="UnityEngine.InputSystem.InputAction.canceled" />.
+        /// </summary>
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.started" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.performed" />
+        /// <seealso cref="UnityEngine.InputSystem.InputAction.canceled" />
+        void OnSpecialAttack2(InputAction.CallbackContext context);
     }
     /// <summary>
     /// Interface to implement callback methods for all input action callbacks associated with input actions defined by "UI" which allows adding and removing callbacks.
