@@ -164,6 +164,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: a2ae03de7b2fe7d4481bfbd980667cea, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
+  player: {fileID: 1216515110}
 --- !u!61 &42747346
 BoxCollider2D:
   m_ObjectHideFlags: 0
@@ -194,11 +195,11 @@ BoxCollider2D:
   m_CallbackLayers:
     serializedVersion: 2
     m_Bits: 4294967295
-  m_IsTrigger: 0
+  m_IsTrigger: 1
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0, y: -0.49725828}
+  m_Offset: {x: 0, y: -0.49725816}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0, y: 0}
@@ -208,7 +209,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1, y: 0.031315863}
+  m_Size: {x: 1, y: 0.031315744}
   m_EdgeRadius: 0
 --- !u!1 &519420028
 GameObject:
@@ -444,7 +445,7 @@ GameObject:
   - component: {fileID: 793264106}
   m_Layer: 0
   m_Name: Sol
-  m_TagString: Untagged
+  m_TagString: Ground
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -625,6 +626,17 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 1, y: 1}
   m_EdgeRadius: 0
+--- !u!114 &1216515110 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 2710729667076079350, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+  m_PrefabInstance: {fileID: 8415542890543307062}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1216515102}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d3bd3d75f28aaf6aca9b32999b655eaf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::PlayerScript
 --- !u!1001 &8415542890543307062
 PrefabInstance:
   m_ObjectHideFlags: 0
