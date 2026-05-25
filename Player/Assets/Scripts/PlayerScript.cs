@@ -4,12 +4,16 @@ using System;
 
 public class PlayerScript : MonoBehaviour
 {
-
+	// Public attributes
 	public InputSystem_Actions actions;
 	public float speed;
 	public float jumpForce;
-	float move;
-	Rigidbody2D rb;
+	
+	// Private attribute
+	private Rigidbody2D rb;
+	private float h_speed;
+	private bool grounded;
+	
 	
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
 	
@@ -19,12 +23,12 @@ public class PlayerScript : MonoBehaviour
 		actions = new InputSystem_Actions();
 	}
 	
-	// Called when the object is enable -> usefull because can be called multiple times, for example if an object appears/desappears (!= start that only starts once)
+	// Called when the object is enable -> useful because can be called multiple times, for example if an object appears/desappears (!= start that only starts once)
 	void OnEnable()
 	{
 		actions.Player.Enable();	// Makes it possible to use actions inside action maps in Unity (predefined actions of the rendering engine) => we find in action maps : Player -> lot of actions (for instance Player -> Move for next line) ; thus we setup settings
 		actions.Player.Move.performed += Movement;	// Assign the Method "Movement" written below to the performance of a movement
-		actions.Player.Jump.performed += Jumping;	// Same thing with "Jumping"
+		actions.Player.Jump.performed += Jumping;   // Same thing with "Jumping"
 		actions.Player.SpecialAttack1.performed += SpecialAttack1;
 
 		actions.Player.Move.canceled += Movement;
@@ -44,18 +48,18 @@ public class PlayerScript : MonoBehaviour
 	
 	
 	
-	// two methods needed above
-	
+	// Character movements
 	void Movement(InputAction.CallbackContext ctx)
 	{
-		move = ctx.ReadValue<Vector2>().x;
+		h_speed = speed * ctx.ReadValue<Vector2>().x;
 	}
 	
 	void Jumping(InputAction.CallbackContext ctx)
 	{
-		if(ctx.performed){			// Otherwise, the action occur when we trigger the space bar... and when we release it !
+		if(ctx.performed && grounded){			// Otherwise, the action occur when we trigger the space bar... and when we release it !
 			rb.linearVelocityY = jumpForce;
 		}
+
 	}
 
 	void SpecialAttack1(InputAction.CallbackContext ctx)
@@ -64,25 +68,27 @@ public class PlayerScript : MonoBehaviour
 			rb.linearVelocityY = -jumpForce;
 		}
 	}
-	
-	
+
+	public void SetGrounded(bool _grounded)
+	{
+		grounded = _grounded;
+	}
 	
 	
 
 	
 	
 	
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
+    // Start is called once before the first execution of Update after the MonoBehavior is created
     // "The Game starts"
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();		// Lie rb à la propriété "Rigidbody2D" qu'on a spécifié sur le joueur dans Unity 
+        rb = GetComponent<Rigidbody2D>();		// Link the Rigidbody2D specified on the editor 
     }
 
     // Update is called once per frame
     void Update()
     {
-    	// To print debug : Debug.Log("test\n");
-     	rb.linearVelocityX = move * speed;
+		rb.linearVelocityX = h_speed;
     }
 }
