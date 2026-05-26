@@ -7,12 +7,16 @@ public class PlayerScript : MonoBehaviour
 	// Public attributes
 	public InputSystem_Actions actions;
 	public float speed;
-	public float jumpForce;
+	public float jumpStrength;
+	public uint maxJumps;
+    [Range(0,1)]
+    public float jumpDamping;
 	
 	// Private attribute
 	private Rigidbody2D rb;
-	private float h_speed;
-	private bool grounded;
+	private float h_speed = 0;
+	private uint remainingJumps = 0;
+	private bool grounded = false;
 	
 	
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
@@ -23,7 +27,7 @@ public class PlayerScript : MonoBehaviour
 		actions = new InputSystem_Actions();
 	}
 	
-	// Called when the object is enable -> useful because can be called multiple times, for example if an object appears/desappears (!= start that only starts once)
+	// Called when the object is enable -> useful because can be called multiple times, for example if an object appears/disappears (!= start that only starts once)
 	void OnEnable()
 	{
 		actions.Player.Enable();	// Makes it possible to use actions inside action maps in Unity (predefined actions of the rendering engine) => we find in action maps : Player -> lot of actions (for instance Player -> Move for next line) ; thus we setup settings
@@ -56,8 +60,11 @@ public class PlayerScript : MonoBehaviour
 	
 	void Jumping(InputAction.CallbackContext ctx)
 	{
-		if(ctx.performed && grounded){			// Otherwise, the action occur when we trigger the space bar... and when we release it !
-			rb.linearVelocityY = jumpForce;
+        // The action occurs when we trigger the space bar
+		// and not when we release it !
+        if (ctx.performed && remainingJumps > 0){            
+			rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ( (maxJumps - remainingJumps) / (maxJumps - 1)));
+			remainingJumps--;
 		}
 
 	}
@@ -65,13 +72,17 @@ public class PlayerScript : MonoBehaviour
 	void SpecialAttack1(InputAction.CallbackContext ctx)
 	{
 		if(ctx.performed){
-			rb.linearVelocityY = -jumpForce;
+			rb.linearVelocityY = -jumpStrength;
 		}
 	}
 
 	public void SetGrounded(bool _grounded)
 	{
 		grounded = _grounded;
+		if(grounded == true)
+		{
+			remainingJumps = maxJumps;
+		}
 	}
 	
 	
