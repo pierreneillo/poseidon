@@ -10,14 +10,14 @@ Helper Grid class to build a neighbour search grid
 public class NeighbourGrid
 {
 
-  public NeighbourGrid(List<Transform> tfs, float cellSize, int cellCount)
+  public NeighbourGrid(List<Transform> tfs, float cellSize, uint cellCount)
   {
 
     transforms = tfs;
     w = cellSize;
     N = cellCount;
 
-    cells = new List<List<int>>(N);
+    cells = new List<List<int>>((int)N);
 
     for (int i = 0; i < N; i++)
     {
@@ -33,7 +33,7 @@ public class NeighbourGrid
 
 
   private float w;
-  private int N;
+  private uint N;
 
   private List<List<int>> cells;
   private List<Transform> transforms;
@@ -62,14 +62,27 @@ public class NeighbourGrid
     return (ux ^ uy) % (uint)N;
   }
 
+  private static ulong expand(uint x)
+  {
+    ulong v = x;
+
+    v = (v | (v << 16)) & 0x0000FFFF0000FFFF;
+    v = (v | (v << 8)) & 0x00FF00FF00FF00FF;
+    v = (v | (v << 4)) & 0x0F0F0F0F0F0F0F0F;
+    v = (v | (v << 2)) & 0x3333333333333333;
+    v = (v | (v << 1)) & 0x5555555555555555;
+
+    return v;
+
+  }
+
   uint hash((int, int) t)
   {
-    // Cast to unsigned ints and multiply by primes
-    uint ux = (uint)t.Item1 * prime1;
-    uint uy = (uint)t.Item2 * prime2;
+    // Cast to unsigned ints
+    uint ux = (uint)t.Item1;
+    uint uy = (uint)t.Item2;
 
-    // XOR the values together, and modulo by N, the number of cells
-    return (ux ^ uy) % (uint)N;
+    return (uint)((expand(ux) | (expand(uy) << 1)) % N);
   }
 
   public List<int> neighbours(Vector2 pos, float d)
@@ -140,7 +153,6 @@ public class WaterSimulation : MonoBehaviour
 
     circle.positionCount = points.Length;
     circle.SetPositions(points);
-    Debug.Log("Circle drawn");
   }
 
 
@@ -195,7 +207,7 @@ public class WaterSimulation : MonoBehaviour
 
     // We build a Neighbour search grid
     float w = 1000 / particleCount;
-    grid = new NeighbourGrid(particles, w, Mathf.FloorToInt((maxX - minX) * (maxY - minY) / (w * w)));
+    grid = new NeighbourGrid(particles, w, (uint)Mathf.FloorToInt((maxX - minX) * (maxY - minY) / (w * w)));
 
   }
 
