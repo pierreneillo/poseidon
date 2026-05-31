@@ -2,6 +2,7 @@ using UnityEngine;
 using UnityEngine.InputSystem;
 using System;
 
+[RequireComponent(typeof(Rigidbody2D))]
 public class PlayerScript : MonoBehaviour
 {
 	// Public attributes
@@ -14,9 +15,9 @@ public class PlayerScript : MonoBehaviour
 	
 	// Private attribute
 	private Rigidbody2D rb;
-	private float h_speed = 0;
-	private uint remainingJumps = 0;
-	private bool grounded = false;
+	private float _hSpeed = 0;
+	private uint _remainingJumps = 0;
+	private bool _grounded = false;
 	
 	
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
@@ -55,16 +56,16 @@ public class PlayerScript : MonoBehaviour
 	// Character movements
 	void Movement(InputAction.CallbackContext ctx)
 	{
-		h_speed = speed * ctx.ReadValue<Vector2>().x;
+		_hSpeed = speed * ctx.ReadValue<Vector2>().x;
 	}
 	
 	void Jumping(InputAction.CallbackContext ctx)
 	{
         // The action occurs when we trigger the space bar
 		// and not when we release it !
-        if (ctx.performed && remainingJumps > 0){            
-			rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ( (maxJumps - remainingJumps) / (maxJumps - 1)));
-			remainingJumps--;
+        if (ctx.performed && _remainingJumps > 0){            
+			rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ( (maxJumps - _remainingJumps) / (maxJumps - 1)));
+			_remainingJumps--;
 		}
 
 	}
@@ -78,10 +79,10 @@ public class PlayerScript : MonoBehaviour
 
 	public void SetGrounded(bool _grounded)
 	{
-		grounded = _grounded;
-		if(grounded == true)
+		this._grounded = _grounded;
+		if(this._grounded == true)
 		{
-			remainingJumps = maxJumps;
+            _remainingJumps = maxJumps;
 		}
 	}
 	
@@ -100,6 +101,6 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-		rb.linearVelocityX = h_speed;
+		rb.linearVelocityX = _hSpeed;
     }
 }
