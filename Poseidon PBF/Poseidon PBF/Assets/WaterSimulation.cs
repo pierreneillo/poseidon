@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -37,6 +36,9 @@ public class NeighbourGrid
 
   private List<List<int>> cells;
   private List<Transform> transforms;
+  private List<Vector2> v;
+
+  private Vector2 gravity = Vector2(0, 9.8f);
 
   const uint prime1 = 73856093;
   const uint prime2 = 19349663;
@@ -76,13 +78,24 @@ public class NeighbourGrid
 
   }
 
-  uint hash((int, int) t)
+  uint hash_z((int, int) t)
   {
     // Cast to unsigned ints
     uint ux = (uint)t.Item1;
     uint uy = (uint)t.Item2;
 
     return (uint)((expand(ux) | (expand(uy) << 1)) % N);
+  }
+
+
+  uint hash((int, int) t)
+  {
+    // Cast to unsigned ints and multiply by primes
+    uint ux = (uint)t.Item1 * prime1;
+    uint uy = (uint)t.Item2 * prime2;
+
+    // XOR the values together, and modulo by N, the number of cells
+    return (ux ^ uy) % N;
   }
 
   public List<int> neighbours(Vector2 pos, float d)
