@@ -5,19 +5,25 @@ using System;
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerScript : MonoBehaviour
 {
-	// Public attributes
+    // Public attributes
+    [Header("Movement")]
 	public InputSystem_Actions actions;
 	public float speed;
 	public float jumpStrength;
 	public uint maxJumps;
     [Range(0,1)]
     public float jumpDamping;
-	
-	// Private attribute
-	private Rigidbody2D rb;
+
+    [Space(5)]
+    [Header("Animation")]
+    public Animator animator;
+
+    // Private attribute
+    private Rigidbody2D _rb;
 	private float _hSpeed = 0;
 	private uint _remainingJumps = 0;
 	private bool _grounded = false;
+    private Vector3 _scale;
 	
 	
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
@@ -64,7 +70,7 @@ public class PlayerScript : MonoBehaviour
         // The action occurs when we trigger the space bar
 		// and not when we release it !
         if (ctx.performed && _remainingJumps > 0){            
-			rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ( (maxJumps - _remainingJumps) / (maxJumps - 1)));
+			_rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ( (maxJumps - _remainingJumps) / (maxJumps - 1)));
 			_remainingJumps--;
 		}
 
@@ -73,7 +79,7 @@ public class PlayerScript : MonoBehaviour
 	void SpecialAttack1(InputAction.CallbackContext ctx)
 	{
 		if(ctx.performed){
-			rb.linearVelocityY = -jumpStrength;
+			_rb.linearVelocityY = -jumpStrength;
 		}
 	}
 
@@ -95,12 +101,28 @@ public class PlayerScript : MonoBehaviour
     // "The Game starts"
     void Start()
     {
-        rb = GetComponent<Rigidbody2D>();		// Link the Rigidbody2D specified on the editor 
+        _rb = GetComponent<Rigidbody2D>();		// Link the Rigidbody2D specified on the editor 
+        _scale = transform.localScale;
     }
 
     // Update is called once per frame
     void Update()
     {
-		rb.linearVelocityX = _hSpeed;
+        Flip(_hSpeed);
+		_rb.linearVelocityX = _hSpeed;
+        animator.SetBool("isMoving", (_hSpeed != 0));
     }
+
+
+    private void Flip(float speed)
+    {
+        if(speed != 0)
+        {
+            transform.localScale = new Vector3(
+                speed >= 0 ? _scale.x : -_scale.x,
+                _scale.y,
+            _scale.z);
+        }
+    }
+
 }
