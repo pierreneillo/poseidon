@@ -36,7 +36,7 @@ public class CustomCamera : MonoBehaviour
     {
         if (target == null) return;
 
-        Vector2 targetPosition2D = target.position - _targetOffset;
+        Vector2 targetPosition2D = target.position + _targetOffset;
         Vector2 cameraPosition2D = transform.position;
         Vector2 diff = targetPosition2D - cameraPosition2D;
         float ellipseDistance = (diff.x * diff.x / _xThresholdRadiusSquared) + (diff.y * diff.y / _yThresholdRadiusSquared) ;
@@ -50,7 +50,7 @@ public class CustomCamera : MonoBehaviour
                 Mathf.Sin(angle) * yThresholdRadius
             );
 
-            Vector2 newCamPos = Vector2.Lerp(cameraPosition2D, targetTargetPosition, 20f * followStrength * Time.deltaTime);
+            Vector2 newCamPos = Vector2.Lerp(cameraPosition2D, targetTargetPosition, 30f * followStrength * Time.deltaTime);
 
             transform.position = new Vector3(
                 newCamPos.x,

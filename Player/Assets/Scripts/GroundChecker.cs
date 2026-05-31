@@ -1,8 +1,10 @@
+using System;
 using UnityEngine;
+using UnityEngine.Events;
 
 public class GroundChecker : MonoBehaviour
 {
-    public PlayerScript player;
+    public UnityEvent<bool> setCollisionStateAction;
 
     private int collidedGrounds = 0;
 
@@ -11,7 +13,7 @@ public class GroundChecker : MonoBehaviour
         if (other.CompareTag("Ground"))
         {
             collidedGrounds++;
-            player.SetGrounded(true);
+            setCollisionStateAction?.Invoke(true);
         }
     }
 
@@ -22,7 +24,7 @@ public class GroundChecker : MonoBehaviour
             collidedGrounds--;
             if(collidedGrounds == 0)
             {
-                player.SetGrounded(false);
+                setCollisionStateAction?.Invoke(false);
             } 
         }
             
