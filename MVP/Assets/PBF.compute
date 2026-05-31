@@ -1,0 +1,72 @@
+#pragma kernel calculateHash
+#pragma kernel updateNeighbourGrid
+#pragma kernel updateParticles
+
+
+struct PBFSim{
+    float cellSize;
+};
+
+struct Particle
+{
+    float2 position;
+    float2 velocity;
+};
+
+RWStructuredBuffer<Particle> Particles;
+
+struct Hash{
+    uint hash; // Particle hash (z-curve ordering)
+    uint pid; // Particle index
+};
+
+RWStructuredBuffer<Hash> Hashes;
+RWStructuredBuffer<NeighborData> NeighborBuffer;
+
+
+// PBF simulation parameters, coming from the C#
+PBFSim sim;
+
+
+// Delta time coming from the C# script
+float dt;
+
+
+uint extend(uint v){
+    // We "extend" the bits (interleave with zeros) using magic numbers
+    uint x = v & 0x0000FFFF;
+    x = (x | (x <<  8)) & 0x00FF00FF;
+    x = (x | (x <<  4)) & 0x0F0F0F0F;
+    x = (x | (x <<  2)) & 0x33333333;
+    x = (x | (x <<  1)) & 0x55555555;
+    return x;
+}
+
+uint hash(uint2 cell){
+    // We hash the cell index by interleaving the bits (morton curve)
+    return extend(cell.x) | (extend(cell.y) << 1);
+}
+
+uint hash(float2 position){
+    // We first need to compute cell index
+    return hash(uint2(floor(position.x / sim.cellSize), floor(position.y / sim.cellSize)));
+};
+
+[numthreads(64,1,1)]
+void calculateHash(uint3 id : SV_DispatchThread){
+    uint ix = id.x;
+    // We calculate hash of particles
+    Hash h = Hashes[ix];
+    Hashes[ix].hash = hash(Particles[h.pid].position);
+
+}
+
+[numthreads(64,1,1)]
+void updateParticles(uint3 id : SV_DispatchThread){
+    uint ix = id.x;
+}
+
+[numthreads(64,1,1)]
+void updateParticles(uint3 id : SV_DispatchThread){
+    uint ix = id.x;
+}
