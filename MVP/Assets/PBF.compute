@@ -8,7 +8,6 @@ struct Particle
 {
     float2 position;
     float2 velocity;
-    float type; // 0.0f = Water, 1.0f = Fire
 };
 
 struct Hash{
@@ -34,7 +33,7 @@ RWStructuredBuffer<float2> PredictedPositionsBuffer;
 
 cbuffer SimulationSettings {
     uint ParticleCount;
-    uint GridCelleCount;
+    uint GridCellCount;
     float cellSize;
     float dt; // fixed deltaTime to avoid instabilities, do NOT send Time.deltaTime
     float smoothingRadius;
@@ -65,6 +64,7 @@ uint getCellHash(float2 position){
 [numthreads(64,1,1)]
 void calculateHash(uint3 id : SV_DispatchThreadID){
     uint ix = id.x;
+    if (ix >= ParticleCount) return;
     // We calculate hash of particles
     Hash h = Hashes[ix];
     Hashes[ix].hash = getCellHash(Particles[h.pid].position);
@@ -88,10 +88,6 @@ void predictPositions(uint3 id : SV_DispatchThreadID){
     Particle p = Particles[ix];
 
     float2 externalForces = gravity;
-    if (p.type == 1.0f) {
-        externalForces = float2(0.0f, 12.0f); // fire goes up
-    }
-
     float2 predictedVelocity = p.velocity + dt*externalForces;
     float2 predictedPosition = p.position + dt * predictedVelocity;
 
