@@ -36,7 +36,7 @@
 │               │              │ GPU (Compute)  │             │               │
 │ Action :      │◄──[Data]─────┤                │             │ Action :      │
 │ - Hosts the   │   Writes new │ Action :       │             │ - Reads the   │
-│ array of C#   │   positions  │ - Executes PBD.│             │   position of │
+│ array of C#   │   positions  │ - Executes PBF.│             │   position of │
 │ structs,      │              │ - Builds Hash  │◄─[Data]─────┤   each        │
 │ directly      │              │   Grid.        │  Reads the  │   particle.   │
 │ inaccessible  │              │ - Applies      │  position   │ - Draws a     │

@@ -1,3 +1,4 @@
+// the order will be (according to the SIGGRAPH paper, Algorithm 1): predictPositions (apply forces) -> updateNeighbourGrid -> calculateDensityAndLambda -> applyVorticity
 #pragma kernel calculateHash
 #pragma kernel updateNeighbourGrid
 #pragma kernel predictPositions
@@ -82,7 +83,19 @@ void updateNeighbourGrid(uint3 id : SV_DispatchThreadID){
 
 [numthreads(64,1,1)]
 void predictPositions(uint3 id : SV_DispatchThreadID){
-    return;
+    uint ix = id.x;
+    if (ix >= ParticleCount) return;
+    Particle p = Particles[ix];
+
+    float2 externalForces = gravity;
+    if (p.type == 1.0f) {
+        externalForces = float2(0.0f, 12.0f); // fire goes up
+    }
+
+    float2 predictedVelocity = p.velocity + dt*externalForces;
+    float2 predictedPosition = p.position + dt * predictedVelocity;
+
+    PredictedPositionsBuffer[ix] = predictedPosition;
 }
 
 [numthreads(64,1,1)]
