@@ -1,5 +1,6 @@
-#pragma kernel calculateHash
-#pragma kernel updateNeighbourGrid
+#pragma kernel clearNeighbourGrid
+#pragma kernel buildNeighbourGrid
+#pragma kernel calculateSomething
 #pragma kernel predictPositions
 #pragma kernel calculateDensityAndLambda
 
@@ -7,7 +8,6 @@ struct Particle
 {
     float2 position;
     float2 velocity;
-    float type; // 0.0f = Water, 1.0f = Fire
 };
 
 struct Hash{
@@ -15,70 +15,151 @@ struct Hash{
     uint pid; // Particle index
 };
 
-struct NeighborData {
-    int count; // number of neighbors found
-    int indices[64]; // max 64 neighbors, value can change later on
-};
-
-// buffers in VRAM
+// Storing Particle positions and velocity
 RWStructuredBuffer<Particle> Particles;
-RWStructuredBuffer<Hash> Hashes;
-RWStructuredBuffer<NeighborData> NeighborBuffer;
+
+// Grid cell for neighbour search
+RWStructuredBuffer<uint> ParticlesInCell;
+RWStructuredBuffer<uint> NInCell;
 
 // temporary buffer to store the predicted positions (x*) from the solver
 RWStructuredBuffer<float2> PredictedPositionsBuffer;
 
 // PBF simulation parameters, coming from the C#
-// PBFSim sim;
 
 cbuffer SimulationSettings {
     uint ParticleCount;
-    uint GridCelleCount;
+    uint GridCellCount;
+    uint MaxParticlesPerCell;
     float cellSize;
     float dt; // fixed deltaTime to avoid instabilities, do NOT send Time.deltaTime
     float smoothingRadius;
     float2 gravity;
-}
+};
 
 
-uint extend(uint v){
-    // We "extend" the bits (interleave with zeros) using magic numbers
-    uint x = v & 0x0000FFFF;
-    x = (x | (x <<  8)) & 0x00FF00FF;
-    x = (x | (x <<  4)) & 0x0F0F0F0F;
-    x = (x | (x <<  2)) & 0x33333333;
-    x = (x | (x <<  1)) & 0x55555555;
-    return x;
-}
 
-uint getMortonHash(uint2 cell){
-    // We hash the cell index by interleaving the bits (morton curve)
-    return extend(cell.x) | (extend(cell.y) << 1);
-}
+// TODO : Bitonic sort
 
-uint getCellHash(float2 position){
-    // We first need to compute cell index
-    return getMortonHash(uint2(floor(position.x / cellSize), floor(position.y / cellSize)));
+// uint extend(uint v){
+//     // We "extend" the bits (interleave with zeros) using magic numbers
+//     uint x = v & 0x0000FFFF;
+//     x = (x | (x <<  8)) & 0x00FF00FF;
+//     x = (x | (x <<  4)) & 0x0F0F0F0F;
+//     x = (x | (x <<  2)) & 0x33333333;
+//     x = (x | (x <<  1)) & 0x55555555;
+//     return x;
+// }
+
+// /*Gives the Morton hash of a given cell*/
+// uint hash(uint2 cell){
+//     // We hash the cell index by interleaving the bits (morton curve)
+//     return extend(cell.x) | (extend(cell.y) << 1);
+// }
+
+// /*Gives the Morton hash of the cell the point is in*/
+// uint hash(float2 position){
+//     // We first need to compute cell index
+//     return hash(uint2(floor(position.x / cellSize), floor(position.y / cellSize)));
+// }
+
+// [numthreads(64,1,1)]
+// void calculateHash(uint3 id : SV_DispatchThreadID){
+//     uint ix = id.x;
+//     if (ix < ParticleCount){
+//         // We update the hash of the given particle
+//         Hashes[ix].hash = hash(Particles[Hashes[ix].pid].position);
+//     }
+// }
+
+// cbuffer BitonicSortParams{
+//     uint GroupWidth;
+//     uint ComparingDistance;
+// };
+
+// void swapHashes(uint i, uint j){
+//     Hash h = Hashes[i];
+//     Hashes[i] = Hashes[j];
+//     Hashes[j] = h;
+// }
+
+// [numthreads(64,1,1)]
+// void BitonicCompare(uint3 id : SV_DispatchThreadID){
+//     uint ix = id.x;
+//     // We have to calculate the left and right indices
+//     // If the right index is greater than particleCount, we can drop the comparison
+//     uint left = ;
+//     uint right = left + d;
+//     if (right < ParticleCount){
+//         if (Hashes[left].hash > Hash[right].hash)
+//             // We have to swap
+//             swapHashes(left, right);
+        
+
+//     }
+// }
+
+
+uint teschnerHash(int2 cell){
+    return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
 }
 
 [numthreads(64,1,1)]
-void calculateHash(uint3 id : SV_DispatchThreadID){
+void clearNeighbourGrid(uint3 id : SV_DispatchThreadID){
     uint ix = id.x;
-    // We calculate hash of particles
-    Hash h = Hashes[ix];
-    Hashes[ix].hash = getCellHash(Particles[h.pid].position);
-
+    if (ix < GridCellCount)
+        // We empty the NIncell buffer
+        NInCell[ix] = 0;
 }
 
 [numthreads(64,1,1)]
-void updateParticles(uint3 id : SV_DispatchThreadID){
+void buildNeighbourGrid(uint3 id : SV_DispatchThreadID){
     uint ix = id.x;
+    if (ix < ParticleCount){
+        Particle p = Particles[ix];
+        // We hash
+        uint h = teschnerHash(int2(floor(p.position / cellSize)));
+
+        uint index;
+        // We safely add 1 to the number of elements in the grid cell
+        InterlockedAdd(NInCell[h], 1, index);
+
+        if (index < MaxParticlesPerCell)
+            ParticlesInCell[h*MaxParticlesPerCell + index] = ix;
+    }
 }
 
 [numthreads(64,1,1)]
-void updateNeighbourGrid(uint3 id : SV_DispatchThreadID){
-    return;
+void calculateSomething(uint3 id : SV_DispatchThreadID){
+    uint ix = id.x;
+    if (ix < ParticleCount){
+        
+        // Get current particle
+        Particle p = Particles[ix];
+        // Calculate its cell (the center cell here, we will search around it)
+        int2 centerCell = int2(floor(p.position / cellSize)); 
+
+        // Loop over the 9 neighbour cells (including self, as it may contain immediate neighbours)
+        for (int i = -1; i <= 1; i++)
+            for (int j = -1; j <= 1; j++){
+                int2 cell = centerCell + int2(i,j);
+                uint h = teschnerHash(cell);
+                uint n = min(NInCell[h], MaxParticlesPerCell);
+                for (uint k = 0; k < n; k++){
+                    // Get neighbours
+                    uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k]; 
+                    Particle neighbour = Particles[neighbourId];
+                    
+                    // The particle might be needed, or may be discarded, depending on physical step
+                    if (neighbourId != ix){
+                        // ... Physics go here ...
+                    }
+                }
+
+            }
+    }
 }
+
 
 [numthreads(64,1,1)]
 void predictPositions(uint3 id : SV_DispatchThreadID){
