@@ -1,4 +1,5 @@
 // the order will be (according to the SIGGRAPH paper, Algorithm 1): predictPositions (apply forces) -> updateNeighbourGrid -> calculateDensityAndLambda -> applyVorticity
+#define PI 3.14159265359f
 #pragma kernel clearNeighbourGrid
 #pragma kernel buildNeighbourGrid
 #pragma kernel calculateSomething
@@ -100,6 +101,24 @@ cbuffer SimulationSettings {
 //     }
 // }
 
+float Poly6Kernel2D(float dist, float h) {
+    if (dist < 0.0f || dist >= h) return 0.0f;
+
+    float h2 = h * h;
+    float erm = h2 - dist * dist;
+
+    float coeff = 4.0f / (PI * pow(h, 8.0f));
+    return coeff * pow(term, 3.0f);
+}
+
+float2 SpikyKernelGradient2D(float2 r, float dist, float h) {
+    if (dist <= 0.0f || dist >= h) return float2(0.0f, 0.0f);
+    
+    float term = h - dist;
+    float coeff = -30.0f / (PI * pow(h, 5.0f));
+
+    return coeff * term * term * (r / dist);
+}
 
 uint teschnerHash(int2 cell){
     return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
