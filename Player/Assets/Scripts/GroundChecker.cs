@@ -4,7 +4,7 @@ using UnityEngine.Events;
 
 public class GroundChecker : MonoBehaviour
 {
-    public UnityEvent<bool> setCollisionStateAction;
+    public PlayerScript player;
 
     private int collidedGrounds = 0;
 
@@ -13,7 +13,7 @@ public class GroundChecker : MonoBehaviour
         if (other.CompareTag("Ground"))
         {
             collidedGrounds++;
-            setCollisionStateAction?.Invoke(true);
+            player.SetGrounded(true);
         }
     }
 
@@ -24,7 +24,7 @@ public class GroundChecker : MonoBehaviour
             collidedGrounds--;
             if(collidedGrounds == 0)
             {
-                setCollisionStateAction?.Invoke(false);
+                player.SetGrounded(false);
             } 
         }
             

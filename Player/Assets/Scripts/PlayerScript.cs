@@ -62,17 +62,25 @@ public class PlayerScript : MonoBehaviour
 	// Character movements
 	void Movement(InputAction.CallbackContext ctx)
 	{
-		_hSpeed = speed * ctx.ReadValue<Vector2>().x;
+        _hSpeed = speed * ctx.ReadValue<Vector2>().x;
 	}
 	
 	void Jumping(InputAction.CallbackContext ctx)
 	{
         // The action occurs when we trigger the space bar
 		// and not when we release it !
-        if (ctx.performed && _remainingJumps > 0){            
-			_rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ( (maxJumps - _remainingJumps) / (maxJumps - 1)));
-			_remainingJumps--;
-		}
+        if (ctx.performed && _remainingJumps > 0){
+            if(maxJumps == 1)
+            {
+                _rb.linearVelocityY = jumpStrength;
+            }
+            else if(maxJumps > 1)
+            {
+                _rb.linearVelocityY = jumpStrength * (1 - jumpDamping * ((maxJumps - _remainingJumps) / (maxJumps - 1)));
+            }
+            
+            _remainingJumps--;
+        }
 
 	}
 
@@ -86,7 +94,7 @@ public class PlayerScript : MonoBehaviour
 	public void SetGrounded(bool _grounded)
 	{
 		this._grounded = _grounded;
-		if(this._grounded == true)
+		if(_grounded == true)
 		{
             _remainingJumps = maxJumps;
 		}
@@ -108,8 +116,12 @@ public class PlayerScript : MonoBehaviour
     // Update is called once per frame
     void Update()
     {
-        Flip(_hSpeed);
-		_rb.linearVelocityX = _hSpeed;
+        
+        if (_grounded)
+        {
+            _rb.linearVelocityX = _hSpeed;
+        }
+        Flip(_rb.linearVelocityX);
         animator.SetBool("isMoving", (_hSpeed != 0));
     }
 
