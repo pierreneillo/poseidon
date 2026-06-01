@@ -173,6 +173,10 @@ void predictPositions(uint3 id : SV_DispatchThreadID){
     float2 predictedPosition = p.position + dt * predictedVelocity;
 
     PredictedPositionsBuffer[ix] = predictedPosition;
+
+    // to disable later
+    Particles[ix].position = predictedPosition;
+    Particles[ix].velocity = predictedVelocity;
 }
 
 [numthreads(64,1,1)]
