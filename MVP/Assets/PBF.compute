@@ -5,6 +5,7 @@
 #pragma kernel calculateSomething
 #pragma kernel predictPositions
 #pragma kernel calculateDensityAndLambda
+#pragma kernel applyDensityConstraints
 
 struct Particle
 {
@@ -255,4 +256,65 @@ void calculateDensityAndLambda(uint3 id : SV_DispatchThreadID){
 
     // lambda (equation 11)
     LambdaBuffer[ix] = -constraint / (gradientSumSq + epsilon);
+}
+
+[numthreads(64,1,1)]
+void applyDensityConstraints(uint3 id : SV_DispatchThreadID){
+    uint ix = id.x;
+    if (ix >= ParticleCount) return;
+
+    float2 myPos = PredictedPositionsBuffer[ix];
+    float lambda_i = LambdaBuffer[ix];
+    
+    float rho_0 = 1000.0f;
+    float k_corr = 0.1f; // constant for artificial pressure
+    int n_corr = 4;
+    float dq_dist = 0.2f * smoothingRadius; // Delta q
+    
+    float w_dq = Poly6Kernel2D(dq_dist, smoothingRadius);
+    
+    float2 delta_p = float2(0.0f, 0.0f);
+    int2 centerCell = int2(floor(myPos / cellSize));
+
+    // Repulsion forces
+    for (int i = -1; i <= 1; i++) {
+        for (int j = -1; j <= 1; j++) {
+            int2 cell = centerCell + int2(i, j);
+            uint h = teschnerHash(cell);
+            uint n = min(NInCell[h], MaxParticlesPerCell);
+
+            for (uint k = 0; k < n; k++) {
+                uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
+                if (neighborId != ix) {
+                    float2 neighborPos = PredictedPositionsBuffer[neighborId];
+                    float2 r = myPos - neighborPos;
+                    float dist = distance(myPos, neighborPos);
+
+                    // s_c
+                    float w_ij = Poly6Kernel2D(dist, smoothingRadius);
+                    float s_c = 0.0f;
+                    if (w_dq > 0.0f) {
+                        s_c = -k_corr * pow(w_ij / w_dq, n_corr);
+                    }
+
+                    // equation 12
+                    float lambda_j = LambdaBuffer[neighborId];
+                    float2 grad = SpikyKernelGradient2D(r, dist, smoothingRadius);
+                    
+                    delta_p += (lambda_i + lambda_j + s_c) * grad;
+                }
+            }
+        }
+    }
+
+    myPos += delta_p / rho_0;
+
+    // temporary code for collision box, remove later
+    if (myPos.x < -5.0f) { myPos.x = -5.0f; }
+    if (myPos.x >  5.0f) { myPos.x =  5.0f; }
+    if (myPos.y <  0.0f) { myPos.y =  0.0f; }
+    if (myPos.y > 10.0f) { myPos.y = 10.0f; }
+
+    // Sauvegarde de la position corrigée
+    PredictedPositionsBuffer[ix] = myPos;
 }
