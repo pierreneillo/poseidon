@@ -23,6 +23,7 @@ RWStructuredBuffer<Particle> Particles;
 // Grid cell for neighbour search
 RWStructuredBuffer<uint> ParticlesInCell;
 RWStructuredBuffer<uint> NInCell;
+RWStructuredBuffer<float> LambdaBuffer;
 
 // temporary buffer to store the predicted positions (x*) from the solver
 RWStructuredBuffer<float2> PredictedPositionsBuffer;
@@ -105,7 +106,7 @@ float Poly6Kernel2D(float dist, float h) {
     if (dist < 0.0f || dist >= h) return 0.0f;
 
     float h2 = h * h;
-    float erm = h2 - dist * dist;
+    float term = h2 - dist * dist;
 
     float coeff = 4.0f / (PI * pow(h, 8.0f));
     return coeff * pow(term, 3.0f);
@@ -200,5 +201,30 @@ void predictPositions(uint3 id : SV_DispatchThreadID){
 
 [numthreads(64,1,1)]
 void calculateDensityAndLambda(uint3 id : SV_DispatchThreadID){
-    return;
+    uint ix = id.x;
+    if (ix >= ParticleCount) return;
+    float2 myPos = PredictedPositionsBuffer[ix];
+    float rho_0 = 1000.0f;
+    float epsilon = 100.0f;
+    float density = 0.0f;
+    int2 centerCell = int2(floor(myPos/cellSize));
+
+    // local density calculation (equation 2 of the paper)
+    for (int i = -1; i<=1; i++) {
+        for (int j = -1; j<=1; i++) {
+            int2 cell = centerCell + int2(i,j);
+            uint h = teschnerHash(cell);
+            uint n = min(NInCell[h], MaxParticlesPerCell);
+
+            for (uint k = 0; k<n; k++) {
+                uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
+                float2 neighborPos = PredictedPositionsBuffer[neighborId];
+                float dist = distance(myPos, neighborPos);
+                density += Poly6Kernel2D(dist, smoothingRadius);
+            }
+        }
+    }
+
+    float constraint = (density / rho_0) - 1.0f; // equation 1
+
 }
