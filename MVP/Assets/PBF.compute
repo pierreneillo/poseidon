@@ -137,9 +137,9 @@ void clearNeighbourGrid(uint3 id : SV_DispatchThreadID){
 void buildNeighbourGrid(uint3 id : SV_DispatchThreadID){
     uint ix = id.x;
     if (ix < ParticleCount){
-        Particle p = Particles[ix];
+        float2 predPos = PredictedPositionsBuffer[ix];
         // We hash
-        uint h = teschnerHash(int2(floor(p.position / cellSize)));
+        uint h = teschnerHash(int2(floor(predPos / cellSize)));
 
         uint index;
         // We safely add 1 to the number of elements in the grid cell
