@@ -226,5 +226,33 @@ void calculateDensityAndLambda(uint3 id : SV_DispatchThreadID){
     }
 
     float constraint = (density / rho_0) - 1.0f; // equation 1
+    constraint = max(0.0f, constraint);
 
+    // gradients calculus for lambda
+    float gradientSumSq = 0.0f;
+    float2 grad_C_i = float2(0.0f, 0.0f);
+    // equation 8
+    for (int j_x = -1; j_x<=1; j_x++) {
+        for (int j_y = -1; j_y <= 1; j_y++) {
+            int2 cell = centerCell + int2(j_x, j_y);
+            uint h = teschnerHash(cell);
+            uint n = min(NInCell[h], MaxParticlesPerCell);
+            for (uint k = 0; k<n; k++) {
+                uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
+                if (neighborId != ix) {
+                    float2 neighborPos = PredictedPositionsBuffer[neighborId];
+                    float2 r = myPos - neighborPos;
+                    float dist = distance(myPos, neighborPos);
+
+                    float2 grad_C_j = SpikyKernelGradient2D(r, dist, smoothingRadius) / rho_0;
+                    gradientSumSq += dot(grad_C_j, grad_C_j);
+                    grad_C_i += grad_C_j;
+                }
+            }
+        }
+    }
+    gradientSumSq += dot(grad_C_i, grad_C_i);
+
+    // lambda (equation 11)
+    LambdaBuffer[ix] = -constraint / (gradientSumSq + epsilon);
 }
