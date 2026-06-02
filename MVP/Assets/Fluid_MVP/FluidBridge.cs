@@ -17,12 +17,15 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private float cellSize = 1.0f;
     [SerializeField] private float smoothingRadius = 1.0f;
     [SerializeField] private Vector2 gravity = new Vector2(0f, -9.81f);
+    [SerializeField] private uint solverIterations = 1;
 
     // Kernels ID
     private int kernelClear;
     private int kernelBuild;
     private int kernelPredict;
     private int kernelDensity;
+    private int kernelApplyConstraints;
+    private int kernelUpdateParticles;
 
     // VRAM
     private GraphicsBuffer particleBuffer;
@@ -47,7 +50,9 @@ public class FluidBridge : MonoBehaviour
         kernelClear = pbfShader.FindKernel("clearNeighbourGrid");
         kernelBuild = pbfShader.FindKernel("buildNeighbourGrid");
         kernelPredict = pbfShader.FindKernel("predictPositions");
-        kernelDensity = pbfShader.FindKernel("calculateDensityAndLambda");        
+        kernelDensity = pbfShader.FindKernel("calculateDensityAndLambda");
+        kernelApplyConstraints = pbfShader.FindKernel("applyDensityConstraints");
+        kernelUpdateParticles = pbfShader.FindKernel("updateParticles");
         
         rawParticles = new FluidParticle[particleCount];
         for (int i = 0; i < particleCount; i++) {
@@ -93,22 +98,35 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
             pbfShader.Dispatch(kernelPredict, threadGroupsParticles, 1, 1);
 
-            // Reset of grid counters (NInCell)
-            pbfShader.SetBuffer(kernelClear, "NInCell", nInCellBuffer);
-            pbfShader.Dispatch(kernelClear, threadGroupsGrid, 1, 1);
+            for (int iter = 0; iter < solverIterations; iter++) {
 
-            // Fill the spatial grid (InterlockedAdd)
-            pbfShader.SetBuffer(kernelBuild, "PredictedPositionsBuffer", predictedPositionsBuffer);
-            pbfShader.SetBuffer(kernelBuild, "ParticlesInCell", particlesInCellBuffer);
-            pbfShader.SetBuffer(kernelBuild, "NInCell", nInCellBuffer);
-            pbfShader.Dispatch(kernelBuild, threadGroupsParticles, 1, 1);
 
-            // Density and Lambda calculation
-            pbfShader.SetBuffer(kernelDensity, "PredictedPositionsBuffer", predictedPositionsBuffer);
-            pbfShader.SetBuffer(kernelDensity, "ParticlesInCell", particlesInCellBuffer);
-            pbfShader.SetBuffer(kernelDensity, "NInCell", nInCellBuffer);
-            pbfShader.SetBuffer(kernelDensity, "LambdaBuffer", lambdaBuffer);
-            pbfShader.Dispatch(kernelDensity, threadGroupsParticles, 1, 1);
+                // Reset of grid counters (NInCell)
+                pbfShader.SetBuffer(kernelClear, "NInCell", nInCellBuffer);
+                pbfShader.Dispatch(kernelClear, threadGroupsGrid, 1, 1);
+
+                // Fill the spatial grid (InterlockedAdd)
+                pbfShader.SetBuffer(kernelBuild, "PredictedPositionsBuffer", predictedPositionsBuffer);
+                pbfShader.SetBuffer(kernelBuild, "ParticlesInCell", particlesInCellBuffer);
+                pbfShader.SetBuffer(kernelBuild, "NInCell", nInCellBuffer);
+                pbfShader.Dispatch(kernelBuild, threadGroupsParticles, 1, 1);
+
+                // Density and Lambda calculation
+                pbfShader.SetBuffer(kernelDensity, "PredictedPositionsBuffer", predictedPositionsBuffer);
+                pbfShader.SetBuffer(kernelDensity, "ParticlesInCell", particlesInCellBuffer);
+                pbfShader.SetBuffer(kernelDensity, "NInCell", nInCellBuffer);
+                pbfShader.SetBuffer(kernelDensity, "LambdaBuffer", lambdaBuffer);
+                pbfShader.Dispatch(kernelDensity, threadGroupsParticles, 1, 1);
+
+                pbfShader.SetBuffer(kernelApplyConstraints, "PredictedPositionsBuffer", predictedPositionsBuffer);
+                pbfShader.SetBuffer(kernelApplyConstraints, "LambdaBuffer", lambdaBuffer);
+                pbfShader.SetBuffer(kernelApplyConstraints, "ParticlesInCell", particlesInCellBuffer);
+                pbfShader.SetBuffer(kernelApplyConstraints, "NInCell", nInCellBuffer);
+                pbfShader.Dispatch(kernelApplyConstraints, threadGroupsParticles, 1, 1);
+            }
+            pbfShader.SetBuffer(kernelUpdateParticles, "Particles", particleBuffer);
+            pbfShader.SetBuffer(kernelUpdateParticles, "PredictedPositionsBuffer", predictedPositionsBuffer);
+            pbfShader.Dispatch(kernelUpdateParticles, threadGroupsParticles, 1, 1);
 
             accumulator -= fixedDeltaTime;
         }

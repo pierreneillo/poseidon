@@ -6,6 +6,7 @@
 #pragma kernel predictPositions
 #pragma kernel calculateDensityAndLambda
 #pragma kernel applyDensityConstraints
+#pragma kernel updateParticles
 
 struct Particle
 {
@@ -194,10 +195,6 @@ void predictPositions(uint3 id : SV_DispatchThreadID){
     float2 predictedPosition = p.position + dt * predictedVelocity;
 
     PredictedPositionsBuffer[ix] = predictedPosition;
-
-    // to disable later
-    Particles[ix].position = predictedPosition;
-    Particles[ix].velocity = predictedVelocity;
 }
 
 [numthreads(64,1,1)]
@@ -315,6 +312,19 @@ void applyDensityConstraints(uint3 id : SV_DispatchThreadID){
     if (myPos.y <  0.0f) { myPos.y =  0.0f; }
     if (myPos.y > 10.0f) { myPos.y = 10.0f; }
 
-    // Sauvegarde de la position corrigée
     PredictedPositionsBuffer[ix] = myPos;
+}
+
+[numthreads(64,1,1)]
+void updateParticles(uint3 id : SV_DispatchThreadID) {
+    uint ix = id.x;
+    if (ix >= ParticleCount) return;
+
+    Particle p = Particles[ix];
+    float2 predPos = PredictedPositionsBuffer[ix];
+
+    p.velocity = (predPos - p.position) / dt;
+    p.position = predPos;
+
+    Particles[ix] = p;
 }
