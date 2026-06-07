@@ -25,6 +25,10 @@ public class PlayerScript : MonoBehaviour
 	private uint _remainingJumps = 0;
 	private bool _grounded = false;
     private Vector3 _scale;
+
+	// Projectile
+	public ProjectileBehaviour Projectile;
+	public Transform LaunchOffset;
 	
 	
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
@@ -42,10 +46,12 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Move.performed += Movement;	// Assign the Method "Movement" written below to the performance of a movement
 		actions.Player.Jump.performed += Jumping;   // Same thing with "Jumping"
 		actions.Player.SpecialAttack1.performed += SpecialAttack1;
+		actions.Player.Attack.performed += TriggerProjectile;
 
 		actions.Player.Move.canceled += Movement;
 		actions.Player.Jump.canceled += Jumping;
 		actions.Player.SpecialAttack1.canceled += SpecialAttack1;
+		actions.Player.Attack.canceled += TriggerProjectile;
 	}
 	
 	// Opposite of OnEnable() -> cleaning usage (otherwise, the OnEnable() may be triggered once, then twice, ... then 10 times without freeing memory...)
@@ -55,6 +61,7 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Move.performed -= Movement;	
 		actions.Player.Jump.performed -= Jumping;
 		actions.Player.SpecialAttack1.performed -= SpecialAttack1;
+		actions.Player.Attack.performed -= TriggerProjectile;
 	}
 	
 	
@@ -91,6 +98,12 @@ public class PlayerScript : MonoBehaviour
 			_rb.linearVelocityY = -jumpStrength;
 		}
 	}
+	
+	void TriggerProjectile(InputAction.CallbackContext ctx){
+		if(ctx.performed){
+			Instantiate(Projectile, LaunchOffset.position, transform.rotation);
+		}
+	}
 
 	public void SetGrounded(bool _grounded)
 	{
@@ -100,6 +113,7 @@ public class PlayerScript : MonoBehaviour
             _remainingJumps = maxJumps;
 		}
 	}
+
 	
 	
 
@@ -124,6 +138,7 @@ public class PlayerScript : MonoBehaviour
 
 		// So we can later stick on the walls by changing the material or the material's friction
 		_rb.sharedMaterial = zeroFrictionWallMaterial;
+
     }
 
 
