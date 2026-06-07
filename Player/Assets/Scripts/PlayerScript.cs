@@ -17,6 +17,7 @@ public class PlayerScript : MonoBehaviour
     [Space(5)]
     [Header("Animation")]
     public Animator animator;
+	public PhysicsMaterial2D zeroFrictionWallMaterial;	// To simplify: it can be directly changed in unity ; to make it cleaner, we can change that later
 
     // Private attribute
     private Rigidbody2D _rb;
@@ -94,7 +95,7 @@ public class PlayerScript : MonoBehaviour
 	public void SetGrounded(bool _grounded)
 	{
 		this._grounded = _grounded;
-		if(_grounded == true)
+		if(_grounded)
 		{
             _remainingJumps = maxJumps;
 		}
@@ -113,16 +114,16 @@ public class PlayerScript : MonoBehaviour
         _scale = transform.localScale;
     }
 
+	// TO DO UPDATE
     // Update is called once per frame
     void Update()
     {
-        
-        if (_grounded)
-        {
-            _rb.linearVelocityX = _hSpeed;
-        }
+        _rb.linearVelocityX = _hSpeed;
         Flip(_rb.linearVelocityX);
         animator.SetBool("isMoving", (_hSpeed != 0));
+
+		// So we can later stick on the walls by changing the material or the material's friction
+		_rb.sharedMaterial = zeroFrictionWallMaterial;
     }
 
 
