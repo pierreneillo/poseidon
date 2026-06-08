@@ -25,6 +25,7 @@ public class PlayerScript : MonoBehaviour
 	private uint _remainingJumps = 0;
 	private bool _grounded = false;
     private Vector3 _scale;
+	private bool _isFacingRight = true;
 
 	// Projectile
 	public ProjectileBehaviour Projectile;
@@ -114,6 +115,15 @@ public class PlayerScript : MonoBehaviour
 		}
 	}
 
+
+
+
+	public bool getFacingDirection(){
+		return _isFacingRight;
+	}
+
+
+
 	
 	
 
@@ -145,7 +155,13 @@ public class PlayerScript : MonoBehaviour
     private void Flip(float speed)
     {
         if(speed != 0)
-        {
+        {	
+			// We invert the booleen if we change the side
+			if ((speed > 0 && !_isFacingRight) || (speed < 0 && _isFacingRight))
+    		{   
+				_isFacingRight = !_isFacingRight;
+				Debug.Log("change");
+			}
             transform.localScale = new Vector3(
                 speed >= 0 ? _scale.x : -_scale.x,
                 _scale.y,
