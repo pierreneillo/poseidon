@@ -15,7 +15,7 @@ public class FluidBridge : MonoBehaviour
     [Header("Simulation Settings")]
     [SerializeField] private int particleCount = 1000;
     [SerializeField] private int gridCellCount = 2048;
-    [SerializeField] private int maxParticlesPerCell = 10;
+    [SerializeField] private int maxParticlesPerCell = 128;
     [SerializeField] private float cellSize = 1.0f;
     [SerializeField] private float smoothingRadius = 1.0f;
     [SerializeField] private Vector2 gravity = new Vector2(0f, -9.81f);
@@ -23,9 +23,10 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private float viscosity_c = 0.01f;
     [SerializeField] private float collision_damping = 0.1f;
 
-    [SerializeField] private uint solverIterations = 1;
+    [SerializeField] private uint solverIterations = 3;
     [SerializeField] private Vector2 spawnMinPos = new Vector2(-5f, 2f);
     [SerializeField] private Vector2 spawnMaxPos = new Vector2(5f, 7f);
+    [SerializeField] private float rho_0 = 1000.0f;
 
 
     // Kernels ID
@@ -72,7 +73,7 @@ public class FluidBridge : MonoBehaviour
         rawParticles = new FluidParticle[particleCount];
         for (int i = 0; i < particleCount; i++)
         {
-            rawParticles[i].position = new Vector2(Random.Range(spawnMinPos.x, spawnMaxPos.x), Random.Range(spawnMinPos.y, spawnMaxPos.y));
+            rawParticles[i].position = new Vector2(Random.Range(spawnMinPos.x, spawnMaxPos.x), Random.Range(spawnMinPos.y, spawnMaxPos.y)) + (Random.insideUnitCircle * 0.01f);
             rawParticles[i].velocity = new Vector2(0f, 0f);
         }
 
@@ -101,9 +102,14 @@ public class FluidBridge : MonoBehaviour
         int threadGroupsParticles = Mathf.CeilToInt(particleCount / 64f);
         int threadGroupsGrid = Mathf.CeilToInt(gridCellCount / 64f);
 
+        int maxStepsPerFrame = 2;
+        int currentSteps = 0;
+
         // FIXME : This condition can lead to bigger and bigger time steps of the calculation time exceeds deltaTime, and eventually to the simulation completely crashing
-        while (accumulator >= fixedDeltaTime)
+        while (accumulator >= fixedDeltaTime && currentSteps < maxStepsPerFrame)
         {
+            currentSteps++;
+
             // send constant parameters to the cbuffer
             pbfShader.SetInt("ParticleCount", particleCount);
             pbfShader.SetInt("GridCellCount", gridCellCount);
@@ -115,6 +121,7 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("vorticity_epsilon", vorticity_epsilon);
             pbfShader.SetFloat("viscosity_c", viscosity_c);
             pbfShader.SetFloat("collision_damping", collision_damping);
+            pbfShader.SetFloat("rho_0", rho_0);
 
             timer.Restart();
 

@@ -374,9 +374,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pbfShader: {fileID: 7200000, guid: 8d78bb3a74cbe161397c49aee006136d, type: 3}
   vfxGraph: {fileID: 1154585222}
-  particleCount: 1000
+  particleCount: 10000
   gridCellCount: 2048
-  maxParticlesPerCell: 10
+  maxParticlesPerCell: 1000
   cellSize: 1
   smoothingRadius: 1
   gravity: {x: 0, y: -9.81}

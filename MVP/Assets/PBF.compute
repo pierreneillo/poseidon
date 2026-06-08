@@ -47,6 +47,7 @@ cbuffer SimulationSettings {
   float vorticity_epsilon;
   float viscosity_c;
   float collision_damping;
+  float rho_0;
 };
 
 // TODO : Bitonic sort
@@ -210,21 +211,11 @@ uint teschnerHash(int2 cell) {
 
   float padding = 0.5f;
 
-  if (predPos.x < minPos.x + padding) {
-    float penetration = (minPos.x + padding) - predPos.x;
-    predPos.x += penetration * (1.0f + collision_damping);
-  } else if (predPos.x > maxPos.x - padding) {
-    float penetration = predPos.x - (maxPos.x - padding);
-    predPos.x -= penetration * (1.0f + collision_damping);
-  }
+  if (predPos.x < minPos.x + padding) predPos.x = minPos.x + padding;
+  else if (predPos.x > maxPos.x - padding) predPos.x = maxPos.x - padding;
 
-  if (predPos.y < minPos.y + padding) {
-    float penetration = (minPos.y + padding) - predPos.y;
-    predPos.y += penetration * (1.0f + collision_damping);
-  } else if (predPos.y > maxPos.y - padding) {
-    float penetration = predPos.y - (maxPos.y - padding);
-    predPos.y -= penetration * (1.0f + collision_damping);
-  }
+  if (predPos.y < minPos.y + padding) predPos.y = minPos.y + padding;
+  else if (predPos.y > maxPos.y - padding) predPos.y = maxPos.y - padding;
 
 
   PredictedPositionsBuffer[ix] = predPos;
@@ -236,7 +227,6 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
   if (ix >= ParticleCount)
     return;
   float2 myPos = PredictedPositionsBuffer[ix];
-  float rho_0 = 10.f;
   float epsilon = 0.01f;
   float density = 0.f;
   int2 centerCell = int2(floor(myPos / cellSize));
@@ -258,7 +248,7 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
   }
 
   float constraint = (density / rho_0) - 1.0f; // equation 1
-  // constraint = max(0.0f, constraint);
+  constraint = max(0.0f, constraint);
 
   // gradients calculus for lambda
   float gradientSumSq = 0.0f;
@@ -276,6 +266,11 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
           float2 r = myPos - neighborPos;
           float dist = distance(myPos, neighborPos);
 
+          // jitter in case two particles have the same position
+          if (dist <= 0.0001f) {
+              r = float2(0.001f * (ix % 2 == 0 ? 1 : -1), 0.001f);
+              dist = length(r);
+          }
           float2 grad_C_j =
               SpikyKernelGradient2D(r, dist, smoothingRadius) / rho_0;
           gradientSumSq += dot(grad_C_j, grad_C_j);
@@ -299,7 +294,6 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
   float2 myPos = PredictedPositionsBuffer[ix];
   float lambda_i = LambdaBuffer[ix];
 
-  float rho_0 = 10.0f;
   float k_corr = 0.1f; // constant for artificial pressure
   int n_corr = 4;
   float dq_dist = 0.2f * smoothingRadius; // Delta q
@@ -378,7 +372,7 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
           float dist = distance(predPos, neighbourPos);
 
           float2 grad_W = SpikyKernelGradient2D(r, dist, smoothingRadius);
-          omega += cross2D(vdiff, grad_W);
+          omega += cross2D(p.velocity - neighbourVelocity, grad_W);
         }
       }
     }
@@ -393,10 +387,12 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
 
   float2 predPos = PredictedPositionsBuffer[ix];
   Particle p = Particles[ix];
-  p.velocity = (predPos - p.position) / dt;
+  float2 intermediateVelocity = (predPos - p.position) / dt;
 
   float2 grad = float2(0.f, 0.f);
+  float2 xsphVelocityCorrection = float2(0.f, 0.f);
   int2 centerCell = int2(floor(predPos / cellSize));
+  float omega = Vorticity[ix];
 
   for (int i = -1; i <= 1; i++)
     for (int j = -1; j <= 1; j++) {
@@ -406,17 +402,21 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
       for (uint k = 0; k < n; k++) {
         uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
         float2 neighbourPos = PredictedPositionsBuffer[neighbourId];
-        float2 neighbourVelocity = Particles[neighbourId].velocity;
+        float2 neighbourVelocity = (neighbourPos - Particles[neighbourId].position) / dt;
 
         if (neighbourId != ix) {
 
-          float2 vdiff = neighbourVelocity - p.velocity;
+          float2 vdiff = neighbourVelocity - intermediateVelocity;
           float2 r = predPos - neighbourPos;
           float dist = distance(predPos, neighbourPos);
 
           float2 grad_W = SpikyKernelGradient2D(r, dist, smoothingRadius);
 
-          grad += Vorticity[neighbourId] * grad_W;
+          float eta = length(Vorticity[neighbourId]) - length(omega);
+          grad += eta * grad_W;
+
+          float w_ij = Poly6Kernel2D(dist, smoothingRadius);
+          xsphVelocityCorrection += (neighbourVelocity - intermediateVelocity) * w_ij;
         }
       }
     }
@@ -425,10 +425,9 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
   float2 N = float2(0.f, 0.f);
   if (gradLength > 0.0001f)
     N = grad / gradLength;
-  float omega = Vorticity[ix];
   float2 f_vorticity = vorticity_epsilon * float2(N.y * omega, -N.x * omega);
 
   p.position = predPos;
-  p.velocity += f_vorticity * dt;
+  p.velocity = intermediateVelocity + f_vorticity * dt + viscosity_c * xsphVelocityCorrection;
   Particles[ix] = p;
 }
