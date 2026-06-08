@@ -15,9 +15,10 @@ public class FluidBridge : MonoBehaviour
     [Header("Simulation Settings")]
     [SerializeField] private int particleCount = 1000;
     [SerializeField] private int gridCellCount = 2048;
-    [SerializeField] private int maxParticlesPerCell = 10;
-    [SerializeField] private float cellSize = 1.0f;
-    [SerializeField] private float smoothingRadius = 1.0f;
+    [SerializeField] private int maxParticlesPerCell = 64;
+    [SerializeField] private float cellSize = 1;
+    [SerializeField] private float smoothingRadius = 1;
+    [SerializeField] private float rest_density = 1000;
     [SerializeField] private Vector2 gravity = new Vector2(0f, -9.81f);
     [SerializeField] private float vorticity_epsilon = 0.01f;
     [SerializeField] private float viscosity_c = 0.01f;
@@ -55,7 +56,8 @@ public class FluidBridge : MonoBehaviour
     private float timeAccumulator = 0f;
     private int frameCount = 0;
 
-    void Start() {
+    void Start()
+    {
         if (vfxGraph == null || pbfShader == null)
         {
             throw new System.NullReferenceException($"[FluidBridge] VisualEffect or PBFShader reference is missing on {gameObject.name}! Did you forget to drag and drop it in the Inspector?");
@@ -70,6 +72,11 @@ public class FluidBridge : MonoBehaviour
         kernelUpdateParticles = pbfShader.FindKernel("updateParticles");
 
         rawParticles = new FluidParticle[particleCount];
+        // Ideally, particles must appear at a distance of 0.5 * smoothingRadius from each other
+        // We calculate density of the spawn zone
+        float2 spawnSize = spawnMaxPos - spawnMinPos;
+        float density = particleCount / spawnSize.x * spawnSize.y;
+        UnityEngine.Debug.Log($"The spawn density is {density}");
         for (int i = 0; i < particleCount; i++)
         {
             rawParticles[i].position = new Vector2(Random.Range(spawnMinPos.x, spawnMaxPos.x), Random.Range(spawnMinPos.y, spawnMaxPos.y));
@@ -94,7 +101,8 @@ public class FluidBridge : MonoBehaviour
         vfxGraph.SetGraphicsBuffer("LambdaBuffer", lambdaBuffer);
     }
 
-    void Update() {
+    void Update()
+    {
         accumulator += Time.deltaTime;
 
         // TODO ? : rename these
@@ -111,6 +119,7 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("cellSize", cellSize);
             pbfShader.SetFloat("dt", fixedDeltaTime);
             pbfShader.SetFloat("smoothingRadius", smoothingRadius);
+            pbfShader.SetFloat("rho_0", rest_density);
             pbfShader.SetVector("gravity", gravity);
             pbfShader.SetFloat("vorticity_epsilon", vorticity_epsilon);
             pbfShader.SetFloat("viscosity_c", viscosity_c);
@@ -167,7 +176,7 @@ public class FluidBridge : MonoBehaviour
             UnityEngine.Rendering.AsyncGPUReadback.Request(lambdaBuffer).WaitForCompletion();
 
             timer.Stop();
-            UnityEngine.Debug.Log($"[PBF Profiler] Instant time: {timer.Elapsed.TotalMilliseconds:F3} ms");
+            // UnityEngine.Debug.Log($"[PBF Profiler] Instant time: {timer.Elapsed.TotalMilliseconds:F3} ms");
             accumulator -= fixedDeltaTime;
 
             timeAccumulator += (float)timer.Elapsed.TotalMilliseconds;
@@ -185,7 +194,8 @@ public class FluidBridge : MonoBehaviour
         }
     }
 
-    void OnDestroy() {
+    void OnDestroy()
+    {
         if (particleBuffer != null) { particleBuffer.Release(); particleBuffer = null; }
         if (predictedPositionsBuffer != null) { predictedPositionsBuffer.Release(); predictedPositionsBuffer = null; }
         if (lambdaBuffer != null) { lambdaBuffer.Release(); lambdaBuffer = null; }
