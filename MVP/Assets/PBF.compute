@@ -1,4 +1,6 @@
-// the order will be (according to the SIGGRAPH paper, Algorithm 1): predictPositions (apply forces) -> updateNeighbourGrid -> calculateDensityAndLambda -> applyVorticity
+// the order will be (according to the SIGGRAPH paper, Algorithm 1):
+// predictPositions (apply forces) -> updateNeighbourGrid ->
+// calculateDensityAndLambda -> applyVorticity
 #define PI 3.14159265359f
 #pragma kernel clearNeighbourGrid
 #pragma kernel buildNeighbourGrid
@@ -6,17 +8,17 @@
 #pragma kernel predictPositions
 #pragma kernel calculateDensityAndLambda
 #pragma kernel applyDensityConstraints
+#pragma kernel calculateVorticity
 #pragma kernel updateParticles
 
-struct Particle
-{
-    float2 position;
-    float2 velocity;
+struct Particle {
+  float2 position;
+  float2 velocity;
 };
 
-struct Hash{
-    uint hash; // Particle hash (z-curve ordering)
-    uint pid; // Particle index
+struct Hash {
+  uint hash; // Particle hash (z-curve ordering)
+  uint pid;  // Particle index
 };
 
 // Storing Particle positions and velocity
@@ -26,6 +28,7 @@ RWStructuredBuffer<Particle> Particles;
 RWStructuredBuffer<uint> ParticlesInCell;
 RWStructuredBuffer<uint> NInCell;
 RWStructuredBuffer<float> LambdaBuffer;
+RWStructuredBuffer<float> Vorticity;
 
 // temporary buffer to store the predicted positions (x*) from the solver
 RWStructuredBuffer<float2> PredictedPositionsBuffer;
@@ -33,16 +36,18 @@ RWStructuredBuffer<float2> PredictedPositionsBuffer;
 // PBF simulation parameters, coming from the C#
 
 cbuffer SimulationSettings {
-    uint ParticleCount;
-    uint GridCellCount;
-    uint MaxParticlesPerCell;
-    float cellSize;
-    float dt; // fixed deltaTime to avoid instabilities, do NOT send Time.deltaTime
-    float smoothingRadius;
-    float2 gravity;
+  uint ParticleCount;
+  uint GridCellCount;
+  uint MaxParticlesPerCell;
+  float cellSize;
+  float
+      dt; // fixed deltaTime to avoid instabilities, do NOT send Time.deltaTime
+  float smoothingRadius;
+  float2 gravity;
+  float vorticity_epsilon;
+  float viscosity_c;
+  float collision_damping;
 };
-
-
 
 // TODO : Bitonic sort
 
@@ -65,7 +70,8 @@ cbuffer SimulationSettings {
 // /*Gives the Morton hash of the cell the point is in*/
 // uint hash(float2 position){
 //     // We first need to compute cell index
-//     return hash(uint2(floor(position.x / cellSize), floor(position.y / cellSize)));
+//     return hash(uint2(floor(position.x / cellSize), floor(position.y /
+//     cellSize)));
 // }
 
 // [numthreads(64,1,1)]
@@ -92,239 +98,337 @@ cbuffer SimulationSettings {
 // void BitonicCompare(uint3 id : SV_DispatchThreadID){
 //     uint ix = id.x;
 //     // We have to calculate the left and right indices
-//     // If the right index is greater than particleCount, we can drop the comparison
-//     uint left = ;
-//     uint right = left + d;
-//     if (right < ParticleCount){
+//     // If the right index is greater than particleCount, we can drop the
+//     comparison uint left = ; uint right = left + d; if (right <
+//     ParticleCount){
 //         if (Hashes[left].hash > Hash[right].hash)
 //             // We have to swap
 //             swapHashes(left, right);
-        
 
 //     }
 // }
 
+float cross2D(float2 a, float2 b) { return a.x * b.y - a.y * b.x; }
+
 float Poly6Kernel2D(float dist, float h) {
-    if (dist < 0.0f || dist >= h) return 0.0f;
+  if (dist < 0.0f || dist >= h)
+    return 0.0f;
 
-    float h2 = h * h;
-    float term = h2 - dist * dist;
+  float h2 = h * h;
+  float term = h2 - dist * dist;
 
-    float coeff = 4.0f / (PI * pow(h, 8.0f));
-    return coeff * pow(term, 3.0f);
+  float coeff = 4.0f / (PI * pow(h, 8.0f));
+  return coeff * pow(term, 3.0f);
 }
 
 float2 SpikyKernelGradient2D(float2 r, float dist, float h) {
-    if (dist <= 0.0f || dist >= h) return float2(0.0f, 0.0f);
-    
-    float term = h - dist;
-    float coeff = -30.0f / (PI * pow(h, 5.0f));
+  if (dist <= 0.0f || dist >= h)
+    return float2(0.0f, 0.0f);
 
-    return coeff * term * term * (r / dist);
+  float term = h - dist;
+  float coeff = -30.0f / (PI * pow(h, 5.0f));
+
+  return coeff * term * term * (r / dist);
 }
 
-uint teschnerHash(int2 cell){
-    return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
+uint teschnerHash(int2 cell) {
+  return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
 }
 
-[numthreads(64,1,1)]
-void clearNeighbourGrid(uint3 id : SV_DispatchThreadID){
-    uint ix = id.x;
-    if (ix < GridCellCount)
-        // We empty the NIncell buffer
-        NInCell[ix] = 0;
-}
+[numthreads(64, 1, 1)] void clearNeighbourGrid(uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix < GridCellCount)
+    // We empty the NIncell buffer
+    NInCell[ix] = 0;
+};
 
-[numthreads(64,1,1)]
-void buildNeighbourGrid(uint3 id : SV_DispatchThreadID){
-    uint ix = id.x;
-    if (ix < ParticleCount){
-        float2 predPos = PredictedPositionsBuffer[ix];
-        // We hash
-        uint h = teschnerHash(int2(floor(predPos / cellSize)));
-
-        uint index;
-        // We safely add 1 to the number of elements in the grid cell
-        InterlockedAdd(NInCell[h], 1, index);
-
-        if (index < MaxParticlesPerCell)
-            ParticlesInCell[h*MaxParticlesPerCell + index] = ix;
-    }
-}
-
-[numthreads(64,1,1)]
-void calculateSomething(uint3 id : SV_DispatchThreadID){
-    uint ix = id.x;
-    if (ix < ParticleCount){
-        
-        // Get current particle
-        Particle p = Particles[ix];
-        // Calculate its cell (the center cell here, we will search around it)
-        int2 centerCell = int2(floor(p.position / cellSize)); 
-
-        // Loop over the 9 neighbour cells (including self, as it may contain immediate neighbours)
-        for (int i = -1; i <= 1; i++)
-            for (int j = -1; j <= 1; j++){
-                int2 cell = centerCell + int2(i,j);
-                uint h = teschnerHash(cell);
-                uint n = min(NInCell[h], MaxParticlesPerCell);
-                for (uint k = 0; k < n; k++){
-                    // Get neighbours
-                    uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k]; 
-                    Particle neighbour = Particles[neighbourId];
-                    
-                    // The particle might be needed, or may be discarded, depending on physical step
-                    if (neighbourId != ix){
-                        // ... Physics go here ...
-                    }
-                }
-
-            }
-    }
-}
-
-
-[numthreads(64,1,1)]
-void predictPositions(uint3 id : SV_DispatchThreadID){
-    uint ix = id.x;
-    if (ix >= ParticleCount) return;
-    Particle p = Particles[ix];
-
-    float2 externalForces = gravity;
-    float2 predictedVelocity = p.velocity + dt*externalForces;
-    float2 predictedPosition = p.position + dt * predictedVelocity;
-
-    PredictedPositionsBuffer[ix] = predictedPosition;
-}
-
-[numthreads(64,1,1)]
-void calculateDensityAndLambda(uint3 id : SV_DispatchThreadID){
-    uint ix = id.x;
-    if (ix >= ParticleCount) return;
-    float2 myPos = PredictedPositionsBuffer[ix];
-    float rho_0 = 1000.0f;
-    float epsilon = 100.0f;
-    float density = 0.0f;
-    int2 centerCell = int2(floor(myPos/cellSize));
-
-    // local density calculation (equation 2 of the paper)
-    for (int i = -1; i<=1; i++) {
-        for (int j = -1; j<=1; j++) {
-            int2 cell = centerCell + int2(i,j);
-            uint h = teschnerHash(cell);
-            uint n = min(NInCell[h], MaxParticlesPerCell);
-
-            for (uint k = 0; k<n; k++) {
-                uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
-                float2 neighborPos = PredictedPositionsBuffer[neighborId];
-                float dist = distance(myPos, neighborPos);
-                density += Poly6Kernel2D(dist, smoothingRadius);
-            }
-        }
-    }
-
-    float constraint = (density / rho_0) - 1.0f; // equation 1
-    constraint = max(0.0f, constraint);
-
-    // gradients calculus for lambda
-    float gradientSumSq = 0.0f;
-    float2 grad_C_i = float2(0.0f, 0.0f);
-    // equation 8
-    for (int j_x = -1; j_x<=1; j_x++) {
-        for (int j_y = -1; j_y <= 1; j_y++) {
-            int2 cell = centerCell + int2(j_x, j_y);
-            uint h = teschnerHash(cell);
-            uint n = min(NInCell[h], MaxParticlesPerCell);
-            for (uint k = 0; k<n; k++) {
-                uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
-                if (neighborId != ix) {
-                    float2 neighborPos = PredictedPositionsBuffer[neighborId];
-                    float2 r = myPos - neighborPos;
-                    float dist = distance(myPos, neighborPos);
-
-                    float2 grad_C_j = SpikyKernelGradient2D(r, dist, smoothingRadius) / rho_0;
-                    gradientSumSq += dot(grad_C_j, grad_C_j);
-                    grad_C_i += grad_C_j;
-                }
-            }
-        }
-    }
-    gradientSumSq += dot(grad_C_i, grad_C_i);
-
-    // lambda (equation 11)
-    LambdaBuffer[ix] = -constraint / (gradientSumSq + epsilon);
-}
-
-[numthreads(64,1,1)]
-void applyDensityConstraints(uint3 id : SV_DispatchThreadID){
-    uint ix = id.x;
-    if (ix >= ParticleCount) return;
-
-    float2 myPos = PredictedPositionsBuffer[ix];
-    float lambda_i = LambdaBuffer[ix];
-    
-    float rho_0 = 1000.0f;
-    float k_corr = 0.1f; // constant for artificial pressure
-    int n_corr = 4;
-    float dq_dist = 0.2f * smoothingRadius; // Delta q
-    
-    float w_dq = Poly6Kernel2D(dq_dist, smoothingRadius);
-    
-    float2 delta_p = float2(0.0f, 0.0f);
-    int2 centerCell = int2(floor(myPos / cellSize));
-
-    // Repulsion forces
-    for (int i = -1; i <= 1; i++) {
-        for (int j = -1; j <= 1; j++) {
-            int2 cell = centerCell + int2(i, j);
-            uint h = teschnerHash(cell);
-            uint n = min(NInCell[h], MaxParticlesPerCell);
-
-            for (uint k = 0; k < n; k++) {
-                uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
-                if (neighborId != ix) {
-                    float2 neighborPos = PredictedPositionsBuffer[neighborId];
-                    float2 r = myPos - neighborPos;
-                    float dist = distance(myPos, neighborPos);
-
-                    // s_c
-                    float w_ij = Poly6Kernel2D(dist, smoothingRadius);
-                    float s_c = 0.0f;
-                    if (w_dq > 0.0f) {
-                        s_c = -k_corr * pow(w_ij / w_dq, n_corr);
-                    }
-
-                    // equation 12
-                    float lambda_j = LambdaBuffer[neighborId];
-                    float2 grad = SpikyKernelGradient2D(r, dist, smoothingRadius);
-                    
-                    delta_p += (lambda_i + lambda_j + s_c) * grad;
-                }
-            }
-        }
-    }
-
-    myPos += delta_p / rho_0;
-
-    // temporary code for collision box, remove later
-    if (myPos.x < -5.0f) { myPos.x = -5.0f; }
-    if (myPos.x >  5.0f) { myPos.x =  5.0f; }
-    if (myPos.y <  0.0f) { myPos.y =  0.0f; }
-    if (myPos.y > 10.0f) { myPos.y = 10.0f; }
-
-    PredictedPositionsBuffer[ix] = myPos;
-}
-
-[numthreads(64,1,1)]
-void updateParticles(uint3 id : SV_DispatchThreadID) {
-    uint ix = id.x;
-    if (ix >= ParticleCount) return;
-
-    Particle p = Particles[ix];
+[numthreads(64, 1, 1)] void buildNeighbourGrid(uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix < ParticleCount) {
     float2 predPos = PredictedPositionsBuffer[ix];
+    // We hash
+    uint h = teschnerHash(int2(floor(predPos / cellSize)));
 
-    p.velocity = (predPos - p.position) / dt;
-    p.position = predPos;
+    uint index;
+    // We safely add 1 to the number of elements in the grid cell
+    InterlockedAdd(NInCell[h], 1, index);
 
-    Particles[ix] = p;
+    if (index < MaxParticlesPerCell)
+      ParticlesInCell[h * MaxParticlesPerCell + index] = ix;
+  }
+}
+
+    // This kernel is not meant to be used, but to provide an example of
+    // possible usage of the grid
+    [numthreads(64, 1, 1)] void calculateSomething(
+        uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix < ParticleCount) {
+
+    // Get current particle
+    Particle p = Particles[ix];
+    // Calculate its cell (the center cell here, we will search around it)
+    int2 centerCell = int2(floor(p.position / cellSize));
+
+    // Loop over the 9 neighbour cells (including self, as it may contain
+    // immediate neighbours)
+    for (int i = -1; i <= 1; i++)
+      for (int j = -1; j <= 1; j++) {
+        int2 cell = centerCell + int2(i, j);
+        uint h = teschnerHash(cell);
+        uint n = min(NInCell[h], MaxParticlesPerCell);
+        for (uint k = 0; k < n; k++) {
+          // Get neighbours
+          uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
+          Particle neighbour = Particles[neighbourId];
+
+          // The particle might be needed, or may be discarded, depending on
+          // physical step
+          if (neighbourId != ix) {
+            // ... Physics go here ...
+          }
+        }
+      }
+  }
+}
+
+[numthreads(64, 1, 1)] void predictPositions(uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix >= ParticleCount)
+    return;
+  Particle p = Particles[ix];
+
+  float2 externalForces = gravity;
+  p.velocity += dt * externalForces;
+  Particles[ix] = p;
+  float2 predPos = p.position + dt * p.velocity;
+
+  // BOUNDARIES
+  // For now the walls are fixed
+  float2 minPos = float2(-4.f, -2.5f);
+  float2 maxPos = float2(4.f, 2.5f);
+
+  float padding = 0.5f;
+
+  if (predPos.x < minPos.x + padding) {
+    float penetration = (minPos.x + padding) - predPos.x;
+    predPos.x += penetration * (1.0f + collision_damping);
+  } else if (predPos.x > maxPos.x - padding) {
+    float penetration = predPos.x - (maxPos.x - padding);
+    predPos.x -= penetration * (1.0f + collision_damping);
+  }
+
+  if (predPos.y < minPos.y + padding) {
+    float penetration = (minPos.y + padding) - predPos.y;
+    predPos.y += penetration * (1.0f + collision_damping);
+  } else if (predPos.y > maxPos.y - padding) {
+    float penetration = predPos.y - (maxPos.y - padding);
+    predPos.y -= penetration * (1.0f + collision_damping);
+  }
+
+
+  PredictedPositionsBuffer[ix] = predPos;
+};
+
+[numthreads(64, 1, 1)] void
+calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix >= ParticleCount)
+    return;
+  float2 myPos = PredictedPositionsBuffer[ix];
+  float rho_0 = 10.f;
+  float epsilon = 0.01f;
+  float density = 0.f;
+  int2 centerCell = int2(floor(myPos / cellSize));
+
+  // local density calculation (equation 2 of the paper)
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      int2 cell = centerCell + int2(i, j);
+      uint h = teschnerHash(cell);
+      uint n = min(NInCell[h], MaxParticlesPerCell);
+
+      for (uint k = 0; k < n; k++) {
+        uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
+        float2 neighborPos = PredictedPositionsBuffer[neighborId];
+        float dist = distance(myPos, neighborPos);
+        density += Poly6Kernel2D(dist, smoothingRadius);
+      }
+    }
+  }
+
+  float constraint = (density / rho_0) - 1.0f; // equation 1
+  // constraint = max(0.0f, constraint);
+
+  // gradients calculus for lambda
+  float gradientSumSq = 0.0f;
+  float2 grad_C_i = float2(0.0f, 0.0f);
+  // equation 8
+  for (int j_x = -1; j_x <= 1; j_x++) {
+    for (int j_y = -1; j_y <= 1; j_y++) {
+      int2 cell = centerCell + int2(j_x, j_y);
+      uint h = teschnerHash(cell);
+      uint n = min(NInCell[h], MaxParticlesPerCell);
+      for (uint k = 0; k < n; k++) {
+        uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
+        if (neighborId != ix) {
+          float2 neighborPos = PredictedPositionsBuffer[neighborId];
+          float2 r = myPos - neighborPos;
+          float dist = distance(myPos, neighborPos);
+
+          float2 grad_C_j =
+              SpikyKernelGradient2D(r, dist, smoothingRadius) / rho_0;
+          gradientSumSq += dot(grad_C_j, grad_C_j);
+          grad_C_i += grad_C_j;
+        }
+      }
+    }
+  }
+  gradientSumSq += dot(grad_C_i, grad_C_i);
+
+  // lambda (equation 11)
+  LambdaBuffer[ix] = -constraint / (gradientSumSq + epsilon);
+};
+
+    [numthreads(64, 1, 1)] void applyDensityConstraints(
+        uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix >= ParticleCount)
+    return;
+
+  float2 myPos = PredictedPositionsBuffer[ix];
+  float lambda_i = LambdaBuffer[ix];
+
+  float rho_0 = 10.0f;
+  float k_corr = 0.1f; // constant for artificial pressure
+  int n_corr = 4;
+  float dq_dist = 0.2f * smoothingRadius; // Delta q
+
+  float w_dq = Poly6Kernel2D(dq_dist, smoothingRadius);
+
+  float2 delta_p = float2(0.0f, 0.0f);
+  int2 centerCell = int2(floor(myPos / cellSize));
+
+  // Repulsion forces
+  for (int i = -1; i <= 1; i++) {
+    for (int j = -1; j <= 1; j++) {
+      int2 cell = centerCell + int2(i, j);
+      uint h = teschnerHash(cell);
+      uint n = min(NInCell[h], MaxParticlesPerCell);
+
+      for (uint k = 0; k < n; k++) {
+        uint neighborId = ParticlesInCell[h * MaxParticlesPerCell + k];
+        if (neighborId != ix) {
+          float2 neighborPos = PredictedPositionsBuffer[neighborId];
+          float2 r = myPos - neighborPos;
+          float dist = distance(myPos, neighborPos);
+
+          // s_c
+          float w_ij = Poly6Kernel2D(dist, smoothingRadius);
+          float s_c = 0.0f;
+          if (w_dq > 0.0f) {
+            s_c = -k_corr * pow(w_ij / w_dq, n_corr);
+          }
+
+          // equation 12
+          float lambda_j = LambdaBuffer[neighborId];
+          float2 grad = SpikyKernelGradient2D(r, dist, smoothingRadius);
+
+          delta_p += (lambda_i + lambda_j + s_c) * grad;
+        }
+      }
+    }
+  }
+
+  myPos += delta_p / rho_0;
+
+  PredictedPositionsBuffer[ix] = myPos;
+};
+
+[numthreads(64, 1, 1)] void calculateVorticity(uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix >= ParticleCount)
+    return;
+
+  Particle p = Particles[ix];
+  float2 predPos = PredictedPositionsBuffer[ix];
+
+  p.velocity = (predPos - p.position) / dt;
+
+  // Vorticity confinment
+  float omega = 0.f;
+  int2 centerCell = int2(floor(predPos / cellSize));
+  for (int i = -1; i <= 1; i++)
+    for (int j = -1; j <= 1; j++) {
+      int2 cell = centerCell + int2(i, j);
+      uint h = teschnerHash(cell);
+
+      uint n = min(NInCell[h], MaxParticlesPerCell);
+
+      for (uint k = 0; k < n; k++) {
+
+        uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
+        float2 neighbourPos = PredictedPositionsBuffer[neighbourId];
+          float2 neighbourVelocity = (neighbourPos - Particles[neighbourId].position) / dt;
+
+        if (neighbourId != ix) {
+
+          float2 vdiff = neighbourVelocity - p.velocity;
+          float2 r = predPos - neighbourPos;
+          float dist = distance(predPos, neighbourPos);
+
+          float2 grad_W = SpikyKernelGradient2D(r, dist, smoothingRadius);
+          omega += cross2D(vdiff, grad_W);
+        }
+      }
+    }
+
+  Vorticity[ix] = omega;
+};
+
+[numthreads(64, 1, 1)] void updateParticles(uint3 id : SV_DispatchThreadID) {
+  uint ix = id.x;
+  if (ix >= ParticleCount)
+    return;
+
+  float2 predPos = PredictedPositionsBuffer[ix];
+  Particle p = Particles[ix];
+  p.velocity = (predPos - p.position) / dt;
+
+  float2 grad = float2(0.f, 0.f);
+  int2 centerCell = int2(floor(predPos / cellSize));
+
+  for (int i = -1; i <= 1; i++)
+    for (int j = -1; j <= 1; j++) {
+      int2 cell = centerCell + int2(i, j);
+      uint h = teschnerHash(cell);
+      uint n = min(NInCell[h], MaxParticlesPerCell);
+      for (uint k = 0; k < n; k++) {
+        uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
+        float2 neighbourPos = PredictedPositionsBuffer[neighbourId];
+        float2 neighbourVelocity = Particles[neighbourId].velocity;
+
+        if (neighbourId != ix) {
+
+          float2 vdiff = neighbourVelocity - p.velocity;
+          float2 r = predPos - neighbourPos;
+          float dist = distance(predPos, neighbourPos);
+
+          float2 grad_W = SpikyKernelGradient2D(r, dist, smoothingRadius);
+
+          grad += Vorticity[neighbourId] * grad_W;
+        }
+      }
+    }
+
+  float gradLength = length(grad);
+  float2 N = float2(0.f, 0.f);
+  if (gradLength > 0.0001f)
+    N = grad / gradLength;
+  float omega = Vorticity[ix];
+  float2 f_vorticity = vorticity_epsilon * float2(N.y * omega, -N.x * omega);
+
+  p.position = predPos;
+  p.velocity += f_vorticity * dt;
+  Particles[ix] = p;
 }
