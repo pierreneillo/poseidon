@@ -33,6 +33,9 @@ RWStructuredBuffer<float> Vorticity;
 // temporary buffer to store the predicted positions (x*) from the solver
 RWStructuredBuffer<float2> PredictedPositionsBuffer;
 
+// Debug color buffer
+RWStructuredBuffer<float4> Colors;
+
 // PBF simulation parameters, coming from the C#
 
 cbuffer SimulationSettings {
@@ -43,7 +46,6 @@ cbuffer SimulationSettings {
   float
       dt; // fixed deltaTime to avoid instabilities, do NOT send Time.deltaTime
   float smoothingRadius;
-  float rho_0;
   float2 gravity;
   float vorticity_epsilon;
   float viscosity_c;
@@ -206,17 +208,30 @@ uint teschnerHash(int2 cell) {
 
   // BOUNDARIES
   // For now the walls are fixed
-  float2 minPos = float2(-4.f, -2.5f);
-  float2 maxPos = float2(4.f, 2.5f);
+  float2 minPos = float2(-3.5f, -2.f);
+  float2 maxPos = float2(3.5f, 2.f);
 
   float padding = 0.05f;
+  bool modified = false;
 
-  if (predPos.x < minPos.x + padding) predPos.x = minPos.x + padding;
-  else if (predPos.x > maxPos.x - padding) predPos.x = maxPos.x - padding;
+  if (predPos.x < minPos.x + padding) {
+    modified = true;
+    predPos.x = minPos.x + padding;
+  } else if (predPos.x > maxPos.x - padding) {
+    modified = true;
+    predPos.x = maxPos.x - padding;
+  }
 
-  if (predPos.y < minPos.y + padding) predPos.y = minPos.y + padding;
-  else if (predPos.y > maxPos.y - padding) predPos.y = maxPos.y - padding;
+  if (predPos.y < minPos.y + padding) {
+    modified = true;
+    predPos.y = minPos.y + padding;
+  } else if (predPos.y > maxPos.y - padding) {
+    modified = true;
+    predPos.y = maxPos.y - padding;
+  }
 
+  if (modified)
+    Colors[ix] = float4(1, 0, 0, 1);
 
   PredictedPositionsBuffer[ix] = predPos;
 };
@@ -268,8 +283,8 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
 
           // jitter in case two particles have the same position
           if (dist <= 0.0001f) {
-              r = float2(0.001f * (ix % 2 == 0 ? 1 : -1), 0.001f);
-              dist = length(r);
+            r = float2(0.001f * (ix % 2 == 0 ? 1 : -1), 0.001f);
+            dist = length(r);
           }
           float2 grad_C_j =
               SpikyKernelGradient2D(r, dist, smoothingRadius) / rho_0;
@@ -341,7 +356,6 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
     displacement = normalize(displacement) * max_displacement;
   }
 
-
   myPos += displacement;
 
   PredictedPositionsBuffer[ix] = myPos;
@@ -409,7 +423,8 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
       for (uint k = 0; k < n; k++) {
         uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
         float2 neighbourPos = PredictedPositionsBuffer[neighbourId];
-        float2 neighbourVelocity = (neighbourPos - Particles[neighbourId].position) / dt;
+        float2 neighbourVelocity =
+            (neighbourPos - Particles[neighbourId].position) / dt;
 
         if (neighbourId != ix) {
 
@@ -423,7 +438,8 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
           grad += eta * grad_W;
 
           float w_ij = Poly6Kernel2D(dist, smoothingRadius);
-          xsphVelocityCorrection += (neighbourVelocity - intermediateVelocity) * w_ij;
+          xsphVelocityCorrection +=
+              (neighbourVelocity - intermediateVelocity) * w_ij;
         }
       }
     }
@@ -435,6 +451,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   float2 f_vorticity = vorticity_epsilon * float2(N.y * omega, -N.x * omega);
 
   p.position = predPos;
-  p.velocity = intermediateVelocity + f_vorticity * dt + viscosity_c * xsphVelocityCorrection;
+  p.velocity = intermediateVelocity + f_vorticity * dt +
+               viscosity_c * xsphVelocityCorrection;
   Particles[ix] = p;
 }

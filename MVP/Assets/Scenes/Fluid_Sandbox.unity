@@ -381,11 +381,12 @@ MonoBehaviour:
   smoothingRadius: 0.5
   gravity: {x: 0, y: -9.81}
   vorticity_epsilon: 0
-  viscosity_c: 0.01
-  collision_damping: 0.1
-  solverIterations: 3
+  viscosity_c: 0
+  collision_damping: 0
+  solverIterations: 10
   spawnMinPos: {x: -3.5, y: -2}
   spawnMaxPos: {x: 3.5, y: 2}
+  rho_0: 100000
 --- !u!1 &1513652253
 GameObject:
   m_ObjectHideFlags: 0
@@ -666,5 +667,5 @@ SceneRoots:
   m_ObjectHideFlags: 0
   m_Roots:
   - {fileID: 1513652257}
-  - {fileID: 1154585223}
   - {fileID: 615406900}
+  - {fileID: 1154585223}

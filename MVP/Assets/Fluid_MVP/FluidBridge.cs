@@ -47,6 +47,8 @@ public class FluidBridge : MonoBehaviour
     private GraphicsBuffer particlesInCellBuffer;
     private GraphicsBuffer nInCellBuffer;
 
+    private GraphicsBuffer debugColorBuffer;
+
     private float fixedDeltaTime = 0.016f; // 60Hz
     private float accumulator = 0f;
 
@@ -77,10 +79,12 @@ public class FluidBridge : MonoBehaviour
         float2 spawnSize = spawnMaxPos - spawnMinPos;
         float density = particleCount / spawnSize.x * spawnSize.y;
         UnityEngine.Debug.Log($"The spawn density is {density}");
+        float4[] colors = new float4[particleCount];
         for (int i = 0; i < particleCount; i++)
         {
             rawParticles[i].position = new Vector2(Random.Range(spawnMinPos.x, spawnMaxPos.x), Random.Range(spawnMinPos.y, spawnMaxPos.y)) + (Random.insideUnitCircle * 0.01f);
             rawParticles[i].velocity = new Vector2(0f, 0f);
+            colors[i] = new float4(0, 0, 1, 1);
         }
 
         int stride = Marshal.SizeOf(typeof(FluidParticle));
@@ -96,9 +100,12 @@ public class FluidBridge : MonoBehaviour
 
         nInCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridCellCount, Marshal.SizeOf(typeof(uint)));
 
+        debugColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount, Marshal.SizeOf(typeof(float)) * 4);
+        debugColorBuffer.SetData(colors);
+
         vfxGraph.SetGraphicsBuffer("ParticleBuffer", particleBuffer);
         vfxGraph.SetInt("ParticleCount", particleCount);
-        vfxGraph.SetGraphicsBuffer("LambdaBuffer", lambdaBuffer);
+        vfxGraph.SetGraphicsBuffer("ColorBuffer", debugColorBuffer);
     }
 
     void Update()
@@ -135,6 +142,7 @@ public class FluidBridge : MonoBehaviour
             // Predict positions
             pbfShader.SetBuffer(kernelPredict, "Particles", particleBuffer);
             pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
+            pbfShader.SetBuffer(kernelPredict, "Colors", debugColorBuffer);
             pbfShader.Dispatch(kernelPredict, threadGroupsParticles, 1, 1);
 
             for (int iter = 0; iter < solverIterations; iter++)
@@ -207,5 +215,6 @@ public class FluidBridge : MonoBehaviour
         if (vorticityBuffer != null) { vorticityBuffer.Release(); vorticityBuffer = null; }
         if (particlesInCellBuffer != null) { particlesInCellBuffer.Release(); particlesInCellBuffer = null; }
         if (nInCellBuffer != null) { nInCellBuffer.Release(); nInCellBuffer = null; }
+        if (debugColorBuffer != null) { debugColorBuffer.Release(); debugColorBuffer = null; }
     }
 }
