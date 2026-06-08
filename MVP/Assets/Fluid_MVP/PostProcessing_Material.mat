@@ -59,5 +59,6 @@ Material:
     - _QueueOffset: 0
     m_Colors:
     - _FluidColor: {r: 0.35395512, g: 0.76420534, b: 0.82641506, a: 1}
+    - _Fluid_Color: {r: 0, g: 0.39390904, b: 0.8207547, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1

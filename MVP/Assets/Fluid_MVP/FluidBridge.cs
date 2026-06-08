@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using System.Runtime.InteropServices;
 using Random = UnityEngine.Random;
 using Unity.VisualScripting;
+using System.Diagnostics;
 
 public class FluidBridge : MonoBehaviour
 {
@@ -50,8 +51,11 @@ public class FluidBridge : MonoBehaviour
 
     private FluidParticle[] rawParticles;
 
-    void Start()
-    {
+    private Stopwatch timer = new Stopwatch();
+    private float timeAccumulator = 0f;
+    private int frameCount = 0;
+
+    void Start() {
         if (vfxGraph == null || pbfShader == null)
         {
             throw new System.NullReferenceException($"[FluidBridge] VisualEffect or PBFShader reference is missing on {gameObject.name}! Did you forget to drag and drop it in the Inspector?");
@@ -90,8 +94,7 @@ public class FluidBridge : MonoBehaviour
         vfxGraph.SetGraphicsBuffer("LambdaBuffer", lambdaBuffer);
     }
 
-    void Update()
-    {
+    void Update() {
         accumulator += Time.deltaTime;
 
         // TODO ? : rename these
@@ -112,6 +115,8 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("vorticity_epsilon", vorticity_epsilon);
             pbfShader.SetFloat("viscosity_c", viscosity_c);
             pbfShader.SetFloat("collision_damping", collision_damping);
+
+            timer.Restart();
 
             // Predict positions
             pbfShader.SetBuffer(kernelPredict, "Particles", particleBuffer);
@@ -159,12 +164,28 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetBuffer(kernelUpdateParticles, "NInCell", nInCellBuffer);
             pbfShader.Dispatch(kernelUpdateParticles, threadGroupsParticles, 1, 1);
 
+            UnityEngine.Rendering.AsyncGPUReadback.Request(lambdaBuffer).WaitForCompletion();
+
+            timer.Stop();
+            UnityEngine.Debug.Log($"[PBF Profiler] Instant time: {timer.Elapsed.TotalMilliseconds:F3} ms");
             accumulator -= fixedDeltaTime;
+
+            timeAccumulator += (float)timer.Elapsed.TotalMilliseconds;
+            frameCount++;
+
+            if (frameCount >= 100)
+            {
+                float averageTime = timeAccumulator / frameCount;
+                UnityEngine.Debug.Log($"[PBF Benchmark] Mean time over 100 frames: {averageTime:F3} ms");
+
+                // Reset
+                timeAccumulator = 0f;
+                frameCount = 0;
+            }
         }
     }
 
-    void OnDestroy()
-    {
+    void OnDestroy() {
         if (particleBuffer != null) { particleBuffer.Release(); particleBuffer = null; }
         if (predictedPositionsBuffer != null) { predictedPositionsBuffer.Release(); predictedPositionsBuffer = null; }
         if (lambdaBuffer != null) { lambdaBuffer.Release(); lambdaBuffer = null; }
