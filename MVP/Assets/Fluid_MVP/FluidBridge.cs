@@ -56,7 +56,8 @@ public class FluidBridge : MonoBehaviour
     private float timeAccumulator = 0f;
     private int frameCount = 0;
 
-    void Start() {
+    void Start()
+    {
         if (vfxGraph == null || pbfShader == null)
         {
             throw new System.NullReferenceException($"[FluidBridge] VisualEffect or PBFShader reference is missing on {gameObject.name}! Did you forget to drag and drop it in the Inspector?");
@@ -71,6 +72,11 @@ public class FluidBridge : MonoBehaviour
         kernelUpdateParticles = pbfShader.FindKernel("updateParticles");
 
         rawParticles = new FluidParticle[particleCount];
+        // Ideally, particles must appear at a distance of 0.5 * smoothingRadius from each other
+        // We calculate density of the spawn zone
+        float2 spawnSize = spawnMaxPos - spawnMinPos;
+        float density = particleCount / spawnSize.x * spawnSize.y;
+        UnityEngine.Debug.Log($"The spawn density is {density}");
         for (int i = 0; i < particleCount; i++)
         {
             rawParticles[i].position = new Vector2(Random.Range(spawnMinPos.x, spawnMaxPos.x), Random.Range(spawnMinPos.y, spawnMaxPos.y)) + (Random.insideUnitCircle * 0.01f);
@@ -95,7 +101,8 @@ public class FluidBridge : MonoBehaviour
         vfxGraph.SetGraphicsBuffer("LambdaBuffer", lambdaBuffer);
     }
 
-    void Update() {
+    void Update()
+    {
         accumulator += Time.deltaTime;
 
         // TODO ? : rename these
@@ -174,7 +181,7 @@ public class FluidBridge : MonoBehaviour
             UnityEngine.Rendering.AsyncGPUReadback.Request(lambdaBuffer).WaitForCompletion();
 
             timer.Stop();
-            UnityEngine.Debug.Log($"[PBF Profiler] Instant time: {timer.Elapsed.TotalMilliseconds:F3} ms");
+            // UnityEngine.Debug.Log($"[PBF Profiler] Instant time: {timer.Elapsed.TotalMilliseconds:F3} ms");
             accumulator -= fixedDeltaTime;
 
             timeAccumulator += (float)timer.Elapsed.TotalMilliseconds;
@@ -192,7 +199,8 @@ public class FluidBridge : MonoBehaviour
         }
     }
 
-    void OnDestroy() {
+    void OnDestroy()
+    {
         if (particleBuffer != null) { particleBuffer.Release(); particleBuffer = null; }
         if (predictedPositionsBuffer != null) { predictedPositionsBuffer.Release(); predictedPositionsBuffer = null; }
         if (lambdaBuffer != null) { lambdaBuffer.Release(); lambdaBuffer = null; }

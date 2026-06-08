@@ -43,6 +43,7 @@ cbuffer SimulationSettings {
   float
       dt; // fixed deltaTime to avoid instabilities, do NOT send Time.deltaTime
   float smoothingRadius;
+  float rho_0;
   float2 gravity;
   float vorticity_epsilon;
   float viscosity_c;
@@ -165,7 +166,6 @@ uint teschnerHash(int2 cell) {
         uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
   if (ix < ParticleCount) {
-
     // Get current particle
     Particle p = Particles[ix];
     // Calculate its cell (the center cell here, we will search around it)
@@ -183,8 +183,8 @@ uint teschnerHash(int2 cell) {
           uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
           Particle neighbour = Particles[neighbourId];
 
-          // The particle might be needed, or may be discarded, depending on
-          // physical step
+          // The particle might be needed, or may be discarded, depending
+          // on physical step
           if (neighbourId != ix) {
             // ... Physics go here ...
           }
@@ -209,7 +209,7 @@ uint teschnerHash(int2 cell) {
   float2 minPos = float2(-4.f, -2.5f);
   float2 maxPos = float2(4.f, 2.5f);
 
-  float padding = 0.5f;
+  float padding = 0.05f;
 
   if (predPos.x < minPos.x + padding) predPos.x = minPos.x + padding;
   else if (predPos.x > maxPos.x - padding) predPos.x = maxPos.x - padding;
@@ -285,8 +285,8 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
   LambdaBuffer[ix] = -constraint / (gradientSumSq + epsilon);
 };
 
-    [numthreads(64, 1, 1)] void applyDensityConstraints(
-        uint3 id : SV_DispatchThreadID) {
+[numthreads(64, 1, 1)] void
+applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
   if (ix >= ParticleCount)
     return;
@@ -334,7 +334,15 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
     }
   }
 
-  myPos += delta_p / rho_0;
+  float max_displacement = .5 * smoothingRadius;
+  float2 displacement = delta_p / rho_0;
+
+  if (length(displacement) > max_displacement) {
+    displacement = normalize(displacement) * max_displacement;
+  }
+
+
+  myPos += displacement;
 
   PredictedPositionsBuffer[ix] = myPos;
 };
@@ -360,13 +368,12 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
       uint n = min(NInCell[h], MaxParticlesPerCell);
 
       for (uint k = 0; k < n; k++) {
-
         uint neighbourId = ParticlesInCell[h * MaxParticlesPerCell + k];
         float2 neighbourPos = PredictedPositionsBuffer[neighbourId];
-          float2 neighbourVelocity = (neighbourPos - Particles[neighbourId].position) / dt;
+        float2 neighbourVelocity =
+            (neighbourPos - Particles[neighbourId].position) / dt;
 
         if (neighbourId != ix) {
-
           float2 vdiff = neighbourVelocity - p.velocity;
           float2 r = predPos - neighbourPos;
           float dist = distance(predPos, neighbourPos);
