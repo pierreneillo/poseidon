@@ -9,6 +9,7 @@ public class ProjectileBehaviour : MonoBehaviour
 
     private bool direction = true;
     private float cooldown; 
+    private Vector3 deltaPositionProjectile = new Vector3(1.0f,0,0);
 
     public PlayerScript player;
 
@@ -16,6 +17,12 @@ public class ProjectileBehaviour : MonoBehaviour
         player = UnityEngine.Object.FindFirstObjectByType<PlayerScript>();
         direction = player.getFacingDirection();
         Destroy(gameObject,lifetime);
+        if (direction){
+            transform.position += deltaPositionProjectile;
+        }
+        else{
+            transform.position -= deltaPositionProjectile;
+        }
     }
 
     private void Update(){
@@ -28,6 +35,11 @@ public class ProjectileBehaviour : MonoBehaviour
     }
 
     private void OnCollisionEnter2D(Collision2D collision){
+        // Enemy detected? Kill him!
+        if (collision.gameObject.layer == LayerMask.NameToLayer("Enemies"))
+        {
+            Destroy(collision.gameObject);
+        }
         Destroy(gameObject);
     }
 }

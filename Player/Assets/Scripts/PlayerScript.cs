@@ -160,7 +160,6 @@ public class PlayerScript : MonoBehaviour
 			if ((speed > 0 && !_isFacingRight) || (speed < 0 && _isFacingRight))
     		{   
 				_isFacingRight = !_isFacingRight;
-				Debug.Log("change");
 			}
             transform.localScale = new Vector3(
                 speed >= 0 ? _scale.x : -_scale.x,

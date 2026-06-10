@@ -36,6 +36,7 @@ public class Enemy : MonoBehaviour
         }
 
         _rb.linearVelocityX = _facingDirection * speed;
+
     }
 
     bool CheckWall()
