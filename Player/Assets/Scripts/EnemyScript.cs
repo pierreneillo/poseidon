@@ -17,8 +17,11 @@ public class Enemy : MonoBehaviour
     private int _facingDirection = -1;
     private float _initScaleX;
 
+    public int GPUObstacleID { get; private set; } = -1;
+
     void Start()
     {
+        GPUObstacleID = FluidBridge.RegisterObstacle(this);
         _rb = GetComponent<Rigidbody2D>();
         _initScaleX = transform.localScale.x;
     }
@@ -63,5 +66,9 @@ public class Enemy : MonoBehaviour
         Vector2 origin = (Vector2)transform.position + groundCheckOffset + wallCheckDistance * wallDirection;
         Gizmos.color = Color.green;
         Gizmos.DrawLine(origin, origin + Vector2.down * groundCheckDistance);
+    }
+
+    void OnDestroy() {
+        FluidBridge.UnregisterObstacle(GPUObstacleID);
     }
 }

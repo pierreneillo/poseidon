@@ -73,6 +73,23 @@ public class FluidBridge : MonoBehaviour
 
     private bool isWaitingForFeedback = false; // to avoid overloading gpu with requests
     private const int max_obstacles = 32; // 1 player + 31 enemies
+
+    private static Enemy[] activeObstacles = new Enemy[max_obstacles];
+    private static int currentCount = 1;
+
+    public static int RegisterObstacle(Enemy enemy) {
+        for (int i = 1; i < max_obstacles; i++) {
+            if (activeObstacles[i] == null) {
+                activeObstacles[i] = enemy;
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public static void UnregisterObstacle(int id) {
+        if (id > 0 && id < max_obstacles) activeObstacles[id] = null;
+    }
     
     void Start()
     {
@@ -135,6 +152,29 @@ public class FluidBridge : MonoBehaviour
     void Update()
     {
         accumulator += Time.deltaTime;
+
+        System.Array.Clear(obstacleData, 0, obstacleData.Length);
+
+        PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
+        if (player != null) {
+            Collider2D col = player.GetComponent<Collider2D>();
+            if (col != null) {
+                obstacleData[0].minPos = col.bounds.min;
+                obstacleData[0].maxPos = col.bounds.max;
+            }
+        }
+
+        for (int i = 1; i < max_obstacles; i++) {
+            if (activeObstacles[i] != null) {
+                Collider2D col = activeObstacles[i].GetComponent<Collider2D>():
+                if (col != null) {
+                    obstacleData[i].minPos = col.bounds.min;
+                    obstacleData[i].maxPos = col.bounds.max;
+                }
+            }
+        }
+
+        obstaclesBuffer.SetData(obstacleData);
 
         // TODO ? : rename these
         int threadGroupsParticles = Mathf.CeilToInt(particleCount / 64f);
