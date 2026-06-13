@@ -6,6 +6,14 @@ using Random = UnityEngine.Random;
 using Unity.VisualScripting;
 using System.Diagnostics;
 
+[System.Serializable] // will be useful for debug
+[StructLayout(LayoutKind.Sequential)]
+public struct GPUObstacleAABB
+{
+    public Vector2 minPos;
+    public Vector2 maxPos;
+}
+
 public class FluidBridge : MonoBehaviour
 {
     [Header("References")]
@@ -27,7 +35,6 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private Vector2 spawnMinPos = new Vector2(-5f, 2f);
     [SerializeField] private Vector2 spawnMaxPos = new Vector2(5f, 7f);
     [SerializeField] private float rho_0 = 1000.0f;
-
 
     // Kernels ID
     private int kernelClear;
@@ -58,6 +65,15 @@ public class FluidBridge : MonoBehaviour
     private float timeAccumulator = 0f;
     private int frameCount = 0;
 
+    [Header("Interactions, feedback and gameplay")]
+    private GraphicsBuffer obstaclesBuffer;
+    private GPUObstacleAABB[] obstacleData;
+    private GraphicsBuffer collisionFeedbackBuffer;
+    private uint[] feedbackData; // number of particles in collision with obstacles (index 0 for player, 1 for first enemy...)
+
+    private bool isWaitingForFeedback = false; // to avoid overloading gpu with requests
+    private const int max_obstacles = 32; // 1 player + 31 enemies
+    
     void Start()
     {
         if (vfxGraph == null || pbfShader == null)
