@@ -166,7 +166,7 @@ public class FluidBridge : MonoBehaviour
 
         for (int i = 1; i < max_obstacles; i++) {
             if (activeObstacles[i] != null) {
-                Collider2D col = activeObstacles[i].GetComponent<Collider2D>():
+                Collider2D col = activeObstacles[i].GetComponent<Collider2D>();
                 if (col != null) {
                     obstacleData[i].minPos = col.bounds.min;
                     obstacleData[i].maxPos = col.bounds.max;
@@ -266,6 +266,28 @@ public class FluidBridge : MonoBehaviour
                 timeAccumulator = 0f;
                 frameCount = 0;
             }
+        }
+
+        if (!isWaitingForFeedback) {
+            isWaitingForFeedback = true;
+            AsyncGPUReadback.Request(collisionFeedbackBuffer, (request) => {
+                if (request.hasError || !Application.isPlaying) { isWaitingForFeedback = false; return; }
+
+                var nativeArray = request.GetData<uint>();
+
+                // TODO: change what happens when enemies get hit
+                for (int i = 1; i < max_obstacles; i++) {
+                    if (nativeArray[i] > 40 && activeObstacles[i] != null) {
+                        UnityEngine.Debug.Log($"[Poseidon] Destruction pf {activeObstacles[i].name}.");
+                        Destroy(activeObstacles[i].gameObject);
+                        activeObstacles[i] = null;
+                    }
+                }
+
+                System.Array.Clear(feedbackData, 0, feedbackData.Length);
+                collisionFeedbackBuffer.SetData(feedbackData);
+                isWaitingForFeedback = false;
+            });
         }
     }
 
