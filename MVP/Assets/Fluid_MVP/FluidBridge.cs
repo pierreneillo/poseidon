@@ -119,6 +119,14 @@ public class FluidBridge : MonoBehaviour
         debugColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, particleCount, Marshal.SizeOf(typeof(float)) * 4);
         debugColorBuffer.SetData(colors);
 
+        int aabbStride = Marshal.SizeOf(typeof(GPUObstacleAABB));
+        obstaclesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, max_obstacles, aabbStride);
+        obstacleData = new GPUObstacleAABB[max_obstacles];
+
+        collisionFeedbackBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, max_obstacles, sizeof(uint));
+        feedbackData = new uint[max_obstacles];
+        collisionFeedbackBuffer.SetData(feedbackData);
+
         vfxGraph.SetGraphicsBuffer("ParticleBuffer", particleBuffer);
         vfxGraph.SetInt("ParticleCount", particleCount);
         vfxGraph.SetGraphicsBuffer("ColorBuffer", debugColorBuffer);
