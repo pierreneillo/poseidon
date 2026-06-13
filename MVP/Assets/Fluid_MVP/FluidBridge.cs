@@ -135,7 +135,6 @@ public class FluidBridge : MonoBehaviour
         int maxStepsPerFrame = 2;
         int currentSteps = 0;
 
-        // FIXME : This condition can lead to bigger and bigger time steps of the calculation time exceeds deltaTime, and eventually to the simulation completely crashing
         while (accumulator >= fixedDeltaTime && currentSteps < maxStepsPerFrame)
         {
             currentSteps++;
@@ -205,7 +204,6 @@ public class FluidBridge : MonoBehaviour
             UnityEngine.Rendering.AsyncGPUReadback.Request(lambdaBuffer).WaitForCompletion();
 
             timer.Stop();
-            // UnityEngine.Debug.Log($"[PBF Profiler] Instant time: {timer.Elapsed.TotalMilliseconds:F3} ms");
             accumulator -= fixedDeltaTime;
 
             timeAccumulator += (float)timer.Elapsed.TotalMilliseconds;
