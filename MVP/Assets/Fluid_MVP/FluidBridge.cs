@@ -199,6 +199,7 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("viscosity_c", viscosity_c);
             pbfShader.SetFloat("collision_damping", collision_damping);
             pbfShader.SetFloat("rho_0", rho_0);
+            pbfShader.SetInt("ObstacleCount", activeCount);
 
             timer.Restart();
 
@@ -206,21 +207,20 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetBuffer(kernelPredict, "Particles", particleBuffer);
             pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
             pbfShader.SetBuffer(kernelPredict, "Colors", debugColorBuffer);
+            pbfShader.SetBuffer(kernelPredict, "ObstaclesBuffer", obstaclesBuffer);
             pbfShader.Dispatch(kernelPredict, threadGroupsParticles, 1, 1);
+
+            // Optimization : we now build the grid outside of the solver
+            pbfShader.SetBuffer(kernelClear, "NInCell", nInCellBuffer);
+            pbfShader.Dispatch(kernelClear, threadGroupsGrid, 1, 1);
+
+            pbfShader.SetBuffer(kernelBuild, "PredictedPositionsBuffer", predictedPositionsBuffer);
+            pbfShader.SetBuffer(kernelBuild, "ParticlesInCell", particlesInCellBuffer);
+            pbfShader.SetBuffer(kernelBuild, "NInCell", nInCellBuffer);
+            pbfShader.Dispatch(kernelBuild, threadGroupsParticles, 1, 1);
 
             for (int iter = 0; iter < solverIterations; iter++)
             {
-
-                // Reset of grid counters (NInCell)
-                pbfShader.SetBuffer(kernelClear, "NInCell", nInCellBuffer);
-                pbfShader.Dispatch(kernelClear, threadGroupsGrid, 1, 1);
-
-                // Fill the spatial grid (InterlockedAdd)
-                pbfShader.SetBuffer(kernelBuild, "PredictedPositionsBuffer", predictedPositionsBuffer);
-                pbfShader.SetBuffer(kernelBuild, "ParticlesInCell", particlesInCellBuffer);
-                pbfShader.SetBuffer(kernelBuild, "NInCell", nInCellBuffer);
-                pbfShader.Dispatch(kernelBuild, threadGroupsParticles, 1, 1);
-
                 // Density and Lambda calculation
                 pbfShader.SetBuffer(kernelDensity, "PredictedPositionsBuffer", predictedPositionsBuffer);
                 pbfShader.SetBuffer(kernelDensity, "ParticlesInCell", particlesInCellBuffer);
@@ -232,6 +232,8 @@ public class FluidBridge : MonoBehaviour
                 pbfShader.SetBuffer(kernelApplyConstraints, "LambdaBuffer", lambdaBuffer);
                 pbfShader.SetBuffer(kernelApplyConstraints, "ParticlesInCell", particlesInCellBuffer);
                 pbfShader.SetBuffer(kernelApplyConstraints, "NInCell", nInCellBuffer);
+                pbfShader.SetBuffer(kernelApplyConstraints, "ObstaclesBuffer", obstaclesBuffer);
+                pbfShader.SetBuffer(kernelApplyConstraints, "CollisionFeedbackBuffer", collisionFeedbackBuffer);
                 pbfShader.Dispatch(kernelApplyConstraints, threadGroupsParticles, 1, 1);
             }
 
