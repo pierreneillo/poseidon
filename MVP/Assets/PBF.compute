@@ -21,6 +21,11 @@ struct Hash {
   uint pid;  // Particle index
 };
 
+struct GPUObstacleAABB {
+    float2 minPos;
+    float2 maxPos;
+};
+
 // Storing Particle positions and velocity
 RWStructuredBuffer<Particle> Particles;
 
@@ -35,6 +40,10 @@ RWStructuredBuffer<float2> PredictedPositionsBuffer;
 
 // Debug color buffer
 RWStructuredBuffer<float4> Colors;
+
+// interaction buffers
+StructuredBuffer<GPUObstacleAABB> ObstaclesBuffer;
+RWStructuredBuffer<uint> CollisionFeedbackBuffer;
 
 // PBF simulation parameters, coming from the C#
 
@@ -51,6 +60,7 @@ cbuffer SimulationSettings {
   float viscosity_c;
   float collision_damping;
   float rho_0;
+  uint ObstacleCount;
 };
 
 // TODO : Bitonic sort
@@ -137,6 +147,49 @@ float2 SpikyKernelGradient2D(float2 r, float dist, float h) {
 
 uint teschnerHash(int2 cell) {
   return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
+}
+
+float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registerFeedback) {
+  float2 resolvedPos = currentPos;
+  float r = smoothingRadius * 0.15f;
+
+  for (uint o = 0; o < ObstacleCount; o++) {
+    float2 minP = ObstaclesBuffer[o].minPos;
+    float2 maxP = ObstaclesBuffer[o].maxPos;
+
+    float2 closestPoint = clamp(resolvedPos, minP, maxP);
+    float2 extDir = resolvedPos - closestPoint;
+    float extDistSq = dot(extDir, extDir);
+
+    if (extDistSq > 0.0001f) {
+      // the center of the particle is outside, but it might still intersects the rectangle
+      float extDist = sqrt(extDistSq);
+      if (extDist < r) {
+        resolvedPos = closestPoint + (extDir / extDist) * r;
+        if (registerFeedback && o > 0) {
+          InterlockedAdd(CollisionFeedbackBuffer[o], 1);
+        }
+      }
+    } else {
+      // the particle is completely inside
+      float dLeft   = resolvedPos.x - minP.x;
+      float dRight  = maxP.x - resolvedPos.x;
+      float dBottom = resolvedPos.y - minP.y;
+      float dTop    = maxP.y - resolvedPos.y;
+
+      float minDist = min(min(dLeft, dRight), min(dBottom, dTop));
+
+      if (minDist == dLeft)        resolvedPos.x = minP.x - r;
+      else if (minDist == dRight)  resolvedPos.x = maxP.x + r;
+      else if (minDist == dBottom) resolvedPos.y = minP.y - r;
+      else                         resolvedPos.y = maxP.y + r;
+      
+      if (registerFeedback && o > 0) {
+        InterlockedAdd(CollisionFeedbackBuffer[o], 1); // if it is an enemy, we increase its counter
+      }
+    }
+  }
+  return resolvedPos;
 }
 
 [numthreads(64, 1, 1)] void clearNeighbourGrid(uint3 id : SV_DispatchThreadID) {
@@ -232,6 +285,8 @@ uint teschnerHash(int2 cell) {
 
   if (modified)
     Colors[ix] = float4(1, 0, 0, 1);
+
+  predPos = resolveAABBCollision(predPos, ix, false);
 
   PredictedPositionsBuffer[ix] = predPos;
 };
@@ -357,6 +412,8 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   }
 
   myPos += displacement;
+
+  myPos = resolveAABBCollision(myPos, ix, true);
 
   PredictedPositionsBuffer[ix] = myPos;
 };
