@@ -4,6 +4,7 @@ using Unity.Mathematics;
 using System.Runtime.InteropServices;
 using Random = UnityEngine.Random;
 using Unity.VisualScripting;
+using UnityEngine.Rendering;
 using System.Diagnostics;
 
 [System.Serializable] // will be useful for debug
@@ -199,7 +200,7 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("viscosity_c", viscosity_c);
             pbfShader.SetFloat("collision_damping", collision_damping);
             pbfShader.SetFloat("rho_0", rho_0);
-            pbfShader.SetInt("ObstacleCount", activeCount);
+            pbfShader.SetInt("ObstacleCount", currentCount);
 
             timer.Restart();
 
