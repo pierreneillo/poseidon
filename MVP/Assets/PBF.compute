@@ -450,7 +450,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
           float dist = distance(predPos, neighbourPos);
 
           float2 grad_W = SpikyKernelGradient2D(r, dist, smoothingRadius);
-          omega += cross2D(p.velocity - neighbourVelocity, grad_W);
+          omega += cross2D(vdiff, grad_W);
         }
       }
     }
@@ -491,7 +491,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
           float2 grad_W = SpikyKernelGradient2D(r, dist, smoothingRadius);
 
-          float eta = length(Vorticity[neighbourId]) - length(omega);
+          float eta = abs(Vorticity[neighbourId]) - abs(omega);
           grad += eta * grad_W;
 
           float w_ij = Poly6Kernel2D(dist, smoothingRadius);
