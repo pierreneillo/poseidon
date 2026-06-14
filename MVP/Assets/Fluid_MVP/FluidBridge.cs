@@ -1,11 +1,14 @@
-using UnityEngine;
-using UnityEngine.VFX;
-using Unity.Mathematics;
-using System.Runtime.InteropServices;
-using Random = UnityEngine.Random;
-using Unity.VisualScripting;
-using UnityEngine.Rendering;
 using System.Diagnostics;
+using System.Drawing;
+using System.Runtime.InteropServices;
+using Unity.Entities.UniversalDelegates;
+using Unity.Mathematics;
+using Unity.VisualScripting;
+using UnityEngine;
+using UnityEngine.Rendering;
+using UnityEngine.UIElements;
+using UnityEngine.VFX;
+using Random = UnityEngine.Random;
 
 [System.Serializable] // will be useful for debug
 [StructLayout(LayoutKind.Sequential)]
@@ -78,10 +81,20 @@ public class FluidBridge : MonoBehaviour
     private static Enemy[] activeObstacles = new Enemy[max_obstacles];
     private static int currentCount = 1;
 
+    [Header("Static walls & Signed Distance Field")]
+    [SerializeField] private Vector2 sdfSize = new Vector2(20f, 20f);
+    [SerializeField] private int sdfResolution = 1;
+
+    private GraphicsBuffer sdfValuesBuffer;
+    private GraphicsBuffer sdfGradientBuffer;
+    private float[] sdfValues;
+    private Vector2[] sdfGradientValues;
+
     public static int RegisterObstacle(Enemy enemy) {
         for (int i = 1; i < max_obstacles; i++) {
             if (activeObstacles[i] == null) {
                 activeObstacles[i] = enemy;
+                currentCount++;
                 return i;
             }
         }
@@ -91,7 +104,9 @@ public class FluidBridge : MonoBehaviour
     public static void UnregisterObstacle(int id) {
         if (id > 0 && id < max_obstacles) activeObstacles[id] = null;
     }
-    
+
+
+
     void Start()
     {
         if (vfxGraph == null || pbfShader == null)
@@ -148,6 +163,89 @@ public class FluidBridge : MonoBehaviour
         vfxGraph.SetGraphicsBuffer("ParticleBuffer", particleBuffer);
         vfxGraph.SetInt("ParticleCount", particleCount);
         vfxGraph.SetGraphicsBuffer("ColorBuffer", debugColorBuffer);
+
+
+        // Create the Signed Distance Field
+        AxisAlignedRectWall[] walls = Object.FindObjectsByType<AxisAlignedRectWall>(FindObjectsSortMode.None);
+        sdfValues = new float[sdfResolution*sdfResolution];
+        sdfGradientValues = new Vector2[sdfResolution*sdfResolution];
+        
+        
+        int sdfHalfResolution = sdfResolution / 2;
+        Vector2 pixelStep = new Vector2((sdfSize.x * 2f) / sdfResolution, (sdfSize.y * 2f) / sdfResolution);
+
+        for (int i = 0; i < sdfResolution; i++)
+        {
+            for(int j = 0; j < sdfResolution; j++) {
+                Vector2 position = new Vector2((i - sdfHalfResolution) * pixelStep.x, (j - sdfHalfResolution) * pixelStep.y);
+
+                float minSdfValue = float.MaxValue;
+                Vector2 bestGradient = Vector2.zero;
+                bool wallFound = false;
+
+                foreach (AxisAlignedRectWall wall in walls)
+                {
+                    Collider2D col = wall.GetComponent<Collider2D>();
+                    if (col != null)
+                    {
+                        wallFound = true;
+                        Vector2 center = col.bounds.center;
+                        Vector2 halfExtents = col.bounds.extents;
+                        Vector2 localP = position - center;
+
+                        Vector2 v = new Vector2(Mathf.Abs(localP.x) - halfExtents.x, Mathf.Abs(localP.y) - halfExtents.y);
+
+                        // Compute the SDF value for THIS wall
+                        float extDist = Vector2.Max(v, Vector2.zero).magnitude;
+                        float intDist = Mathf.Min(Mathf.Max(v.x, v.y), 0.0f);
+                        float currentSdf = extDist + intDist;
+
+                        // UNION LOGIC (Opération CSG) : On ne garde que le mur le plus proche du pixel
+                        if (currentSdf < minSdfValue)
+                        {
+                            minSdfValue = currentSdf;
+
+                            // Compute the Gradient for THIS wall
+                            Vector2 signP = new Vector2(Mathf.Sign(localP.x), Mathf.Sign(localP.y));
+                            if (v.x > 0.0f || v.y > 0.0f)
+                            {
+                                bestGradient = Vector2.Max(v, Vector2.zero).normalized * signP;
+                            }
+                            else
+                            {
+                                if (v.x > v.y) bestGradient = new Vector2(signP.x, 0.0f);
+                                else bestGradient = new Vector2(0.0f, signP.y);
+                            }
+                        }
+                    }
+                }
+
+                // Index 1D
+                int pixelIdx = i + (sdfResolution * j);
+
+                if (wallFound)
+                {
+                    sdfValues[pixelIdx] = minSdfValue;
+                    sdfGradientValues[pixelIdx] = bestGradient.normalized;
+                }
+                else
+                {
+                    sdfValues[pixelIdx] = 99999f;
+                    sdfGradientValues[pixelIdx] = Vector2.zero;
+                }
+            }
+        }
+
+        sdfValuesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, sdfResolution * sdfResolution, sizeof(float));
+        sdfValuesBuffer.SetData(sdfValues);
+        sdfGradientBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, sdfResolution * sdfResolution, Marshal.SizeOf(typeof(Vector2)));
+        sdfGradientBuffer.SetData(sdfGradientValues);
+
+        pbfShader.SetBuffer(kernelPredict, "SdfValuesBuffer", sdfValuesBuffer);
+        pbfShader.SetBuffer(kernelPredict, "SdfGradientBuffer", sdfGradientBuffer);
+
+        pbfShader.SetInt("sdfResolution", sdfResolution);
+        pbfShader.SetVector("sdfSize", sdfSize);
     }
 
     void Update()
@@ -201,6 +299,7 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("collision_damping", collision_damping);
             pbfShader.SetFloat("rho_0", rho_0);
             pbfShader.SetInt("ObstacleCount", currentCount);
+            
 
             timer.Restart();
 
@@ -303,5 +402,18 @@ public class FluidBridge : MonoBehaviour
         if (particlesInCellBuffer != null) { particlesInCellBuffer.Release(); particlesInCellBuffer = null; }
         if (nInCellBuffer != null) { nInCellBuffer.Release(); nInCellBuffer = null; }
         if (debugColorBuffer != null) { debugColorBuffer.Release(); debugColorBuffer = null; }
+        if (sdfValuesBuffer != null) { sdfValuesBuffer.Release(); sdfValuesBuffer = null;}
+        if (sdfGradientBuffer != null) {  sdfGradientBuffer.Release(); sdfGradientBuffer = null; }
+    }
+
+    void OnDrawGizmos()
+    {
+        Gizmos.color = UnityEngine.Color.blue;
+        Vector2 tl = new Vector2(-sdfSize.x, sdfSize.y);
+        Vector2 br = new Vector2(sdfSize.x, -sdfSize.y);
+        Gizmos.DrawLine(sdfSize,tl);
+        Gizmos.DrawLine(sdfSize, br);
+        Gizmos.DrawLine(-sdfSize, tl);
+        Gizmos.DrawLine(-sdfSize, br);
     }
 }

@@ -38,6 +38,10 @@ RWStructuredBuffer<float> Vorticity;
 // temporary buffer to store the predicted positions (x*) from the solver
 RWStructuredBuffer<float2> PredictedPositionsBuffer;
 
+// SDF Buffers
+RWStructuredBuffer<float> SdfValuesBuffer;
+RWStructuredBuffer<float2> SdfGradientBuffer;
+
 // Debug color buffer
 RWStructuredBuffer<float4> Colors;
 
@@ -61,6 +65,8 @@ cbuffer SimulationSettings {
   float collision_damping;
   float rho_0;
   uint ObstacleCount;
+  int sdfResolution;
+  float2 sdfSize;
 };
 
 // TODO : Bitonic sort
@@ -152,7 +158,7 @@ uint teschnerHash(int2 cell) {
 float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registerFeedback) {
   float2 resolvedPos = currentPos;
   float r = smoothingRadius * 0.15f;
-
+    
   for (uint o = 0; o < ObstacleCount; o++) {
     float2 minP = ObstaclesBuffer[o].minPos;
     float2 maxP = ObstaclesBuffer[o].maxPos;
@@ -160,7 +166,7 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
     float2 closestPoint = clamp(resolvedPos, minP, maxP);
     float2 extDir = resolvedPos - closestPoint;
     float extDistSq = dot(extDir, extDir);
-
+    
     if (extDistSq > 0.0001f) {
       // the center of the particle is outside, but it might still intersects the rectangle
       float extDist = sqrt(extDistSq);
@@ -260,12 +266,11 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
   float2 predPos = p.position + dt * p.velocity;
 
   // BOUNDARIES
-  // For now the walls are fixed
+  /*
   float2 minPos = float2(-3.5f, -2.f);
   float2 maxPos = float2(3.5f, 2.f);
 
   float padding = 0.05f;
-  bool modified = false;
 
   if (predPos.x < minPos.x + padding) {
     modified = true;
@@ -281,6 +286,20 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
   } else if (predPos.y > maxPos.y - padding) {
     modified = true;
     predPos.y = maxPos.y - padding;
+  }*/
+  
+  bool modified = false;
+  float2 rel_predPos = (predPos + sdfSize) / (2 * sdfSize);
+    
+  int pixelX = clamp((int) (rel_predPos.x * (sdfResolution - 1)), 0, sdfResolution - 1);
+  int pixelY = clamp((int) (rel_predPos.y * (sdfResolution - 1)), 0, sdfResolution - 1);
+
+  int predPos_idx = pixelX + (pixelY * sdfResolution);
+    
+  if (SdfValuesBuffer[predPos_idx] < 0)
+  {
+    predPos = predPos - SdfValuesBuffer[predPos_idx] * SdfGradientBuffer[predPos_idx];
+    modified = true;
   }
 
   if (modified)
