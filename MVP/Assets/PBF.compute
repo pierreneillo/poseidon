@@ -265,47 +265,34 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
   Particles[ix] = p;
   float2 predPos = p.position + dt * p.velocity;
 
-  // BOUNDARIES
-  /*
-  float2 minPos = float2(-3.5f, -2.f);
-  float2 maxPos = float2(3.5f, 2.f);
-
-  float padding = 0.05f;
-
-  if (predPos.x < minPos.x + padding) {
-    modified = true;
-    predPos.x = minPos.x + padding;
-  } else if (predPos.x > maxPos.x - padding) {
-    modified = true;
-    predPos.x = maxPos.x - padding;
-  }
-
-  if (predPos.y < minPos.y + padding) {
-    modified = true;
-    predPos.y = minPos.y + padding;
-  } else if (predPos.y > maxPos.y - padding) {
-    modified = true;
-    predPos.y = maxPos.y - padding;
-  }*/
-  
   bool modified = false;
-  float2 rel_predPos = (predPos + sdfSize) / (2 * sdfSize);
-    
+  float r = smoothingRadius * 0.15f;
+
+  float2 rel_predPos = (predPos + sdfSize) / (2 * sdfSize);  
   int pixelX = clamp((int) (rel_predPos.x * (sdfResolution - 1)), 0, sdfResolution - 1);
   int pixelY = clamp((int) (rel_predPos.y * (sdfResolution - 1)), 0, sdfResolution - 1);
-
   int predPos_idx = pixelX + (pixelY * sdfResolution);
-    
-  if (SdfValuesBuffer[predPos_idx] < 0)
+
+  float sdfDist = SdfValuesBuffer[predPos_idx];
+  float epsilon = smoothingRadius*0.0f;
+
+  if (sdfDist < r + epsilon)
   {
-    predPos = predPos - SdfValuesBuffer[predPos_idx] * SdfGradientBuffer[predPos_idx];
+    predPos = predPos + (r - sdfDist) * SdfGradientBuffer[predPos_idx];
     modified = true;
   }
+
+  // Handling dynamically collisions (player and enemies)
+  float2 finalPos = resolveAABBCollision(predPos, ix, false);
+  if (dot(finalPos - predPos, finalPos - predPos) > 0.0001f) {
+    modified = true;
+  }
+  predPos = finalPos;
 
   if (modified)
     Colors[ix] = float4(1, 0, 0, 1);
-
-  predPos = resolveAABBCollision(predPos, ix, false);
+  else
+    Colors[ix] = float4(0, 0, 1, 1);
 
   PredictedPositionsBuffer[ix] = predPos;
 };
