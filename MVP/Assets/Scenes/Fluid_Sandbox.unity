@@ -1510,12 +1510,12 @@ MonoBehaviour:
   vorticity_epsilon: 0.01
   viscosity_c: 0.001
   collision_damping: 0
-  solverIterations: 10
-  spawnMinPos: {x: -3.5, y: -2}
-  spawnMaxPos: {x: 3.5, y: 2}
+  solverIterations: 4
+  spawnMinPos: {x: -7, y: -2}
+  spawnMaxPos: {x: 7, y: 2}
   rho_0: 80
   sdfSize: {x: 20, y: 20}
-  sdfResolution: 500
+  sdfResolution: 1000
 --- !u!1 &1247309894
 GameObject:
   m_ObjectHideFlags: 0
