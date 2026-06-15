@@ -90,9 +90,12 @@ public class FluidBridge : MonoBehaviour
     private float[] sdfValues;
     private Vector2[] sdfGradientValues;
 
-    public static int RegisterObstacle(Enemy enemy) {
-        for (int i = 1; i < max_obstacles; i++) {
-            if (activeObstacles[i] == null) {
+    public static int RegisterObstacle(Enemy enemy)
+    {
+        for (int i = 1; i < max_obstacles; i++)
+        {
+            if (activeObstacles[i] == null)
+            {
                 activeObstacles[i] = enemy;
                 currentCount++;
                 return i;
@@ -101,7 +104,8 @@ public class FluidBridge : MonoBehaviour
         return -1;
     }
 
-    public static void UnregisterObstacle(int id) {
+    public static void UnregisterObstacle(int id)
+    {
         if (id > 0 && id < max_obstacles) activeObstacles[id] = null;
     }
 
@@ -124,10 +128,6 @@ public class FluidBridge : MonoBehaviour
 
         rawParticles = new FluidParticle[particleCount];
         // Ideally, particles must appear at a distance of 0.5 * smoothingRadius from each other
-        // We calculate density of the spawn zone
-        float2 spawnSize = spawnMaxPos - spawnMinPos;
-        float density = particleCount / spawnSize.x * spawnSize.y;
-        UnityEngine.Debug.Log($"The spawn density is {density}");
         float4[] colors = new float4[particleCount];
         for (int i = 0; i < particleCount; i++)
         {
@@ -167,16 +167,17 @@ public class FluidBridge : MonoBehaviour
 
         // Create the Signed Distance Field
         AxisAlignedRectWall[] walls = Object.FindObjectsByType<AxisAlignedRectWall>(FindObjectsSortMode.None);
-        sdfValues = new float[sdfResolution*sdfResolution];
-        sdfGradientValues = new Vector2[sdfResolution*sdfResolution];
-        
-        
+        sdfValues = new float[sdfResolution * sdfResolution];
+        sdfGradientValues = new Vector2[sdfResolution * sdfResolution];
+
+
         int sdfHalfResolution = sdfResolution / 2;
         Vector2 pixelStep = new Vector2((sdfSize.x * 2f) / sdfResolution, (sdfSize.y * 2f) / sdfResolution);
 
         for (int i = 0; i < sdfResolution; i++)
         {
-            for(int j = 0; j < sdfResolution; j++) {
+            for (int j = 0; j < sdfResolution; j++)
+            {
                 Vector2 position = new Vector2((i - sdfHalfResolution) * pixelStep.x, (j - sdfHalfResolution) * pixelStep.y);
 
                 float minSdfValue = float.MaxValue;
@@ -200,7 +201,7 @@ public class FluidBridge : MonoBehaviour
                         float intDist = Mathf.Min(Mathf.Max(v.x, v.y), 0.0f);
                         float currentSdf = extDist + intDist;
 
-                        // UNION LOGIC (Opération CSG) : On ne garde que le mur le plus proche du pixel
+                        // UNION LOGIC (Opï¿½ration CSG) : On ne garde que le mur le plus proche du pixel
                         if (currentSdf < minSdfValue)
                         {
                             minSdfValue = currentSdf;
@@ -246,6 +247,10 @@ public class FluidBridge : MonoBehaviour
 
         pbfShader.SetInt("sdfResolution", sdfResolution);
         pbfShader.SetVector("sdfSize", sdfSize);
+        pbfShader.SetBuffer(kernelPredict, "Particles", particleBuffer);
+        pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
+        pbfShader.SetBuffer(kernelPredict, "Colors", debugColorBuffer);
+        pbfShader.SetBuffer(kernelPredict, "ObstaclesBuffer", obstaclesBuffer);
     }
 
     void Update()
@@ -255,18 +260,23 @@ public class FluidBridge : MonoBehaviour
         System.Array.Clear(obstacleData, 0, obstacleData.Length);
 
         PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
-        if (player != null) {
+        if (player != null)
+        {
             Collider2D col = player.GetComponent<Collider2D>();
-            if (col != null) {
+            if (col != null)
+            {
                 obstacleData[0].minPos = col.bounds.min;
                 obstacleData[0].maxPos = col.bounds.max;
             }
         }
 
-        for (int i = 1; i < max_obstacles; i++) {
-            if (activeObstacles[i] != null) {
+        for (int i = 1; i < max_obstacles; i++)
+        {
+            if (activeObstacles[i] != null)
+            {
                 Collider2D col = activeObstacles[i].GetComponent<Collider2D>();
-                if (col != null) {
+                if (col != null)
+                {
                     obstacleData[i].minPos = col.bounds.min;
                     obstacleData[i].maxPos = col.bounds.max;
                 }
@@ -299,15 +309,12 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("collision_damping", collision_damping);
             pbfShader.SetFloat("rho_0", rho_0);
             pbfShader.SetInt("ObstacleCount", currentCount);
-            
+
 
             timer.Restart();
 
             // Predict positions
-            pbfShader.SetBuffer(kernelPredict, "Particles", particleBuffer);
-            pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
-            pbfShader.SetBuffer(kernelPredict, "Colors", debugColorBuffer);
-            pbfShader.SetBuffer(kernelPredict, "ObstaclesBuffer", obstaclesBuffer);
+
             pbfShader.Dispatch(kernelPredict, threadGroupsParticles, 1, 1);
 
             // Optimization : we now build the grid outside of the solver
@@ -370,16 +377,20 @@ public class FluidBridge : MonoBehaviour
             }
         }
 
-        if (!isWaitingForFeedback) {
+        if (!isWaitingForFeedback)
+        {
             isWaitingForFeedback = true;
-            AsyncGPUReadback.Request(collisionFeedbackBuffer, (request) => {
+            AsyncGPUReadback.Request(collisionFeedbackBuffer, (request) =>
+            {
                 if (request.hasError || !Application.isPlaying) { isWaitingForFeedback = false; return; }
 
                 var nativeArray = request.GetData<uint>();
 
                 // TODO: change what happens when enemies get hit
-                for (int i = 1; i < max_obstacles; i++) {
-                    if (nativeArray[i] > 40 && activeObstacles[i] != null) {
+                for (int i = 1; i < max_obstacles; i++)
+                {
+                    if (nativeArray[i] > 40 && activeObstacles[i] != null)
+                    {
                         UnityEngine.Debug.Log($"[Poseidon] Destruction pf {activeObstacles[i].name}.");
                         Destroy(activeObstacles[i].gameObject);
                         activeObstacles[i] = null;
@@ -402,8 +413,8 @@ public class FluidBridge : MonoBehaviour
         if (particlesInCellBuffer != null) { particlesInCellBuffer.Release(); particlesInCellBuffer = null; }
         if (nInCellBuffer != null) { nInCellBuffer.Release(); nInCellBuffer = null; }
         if (debugColorBuffer != null) { debugColorBuffer.Release(); debugColorBuffer = null; }
-        if (sdfValuesBuffer != null) { sdfValuesBuffer.Release(); sdfValuesBuffer = null;}
-        if (sdfGradientBuffer != null) {  sdfGradientBuffer.Release(); sdfGradientBuffer = null; }
+        if (sdfValuesBuffer != null) { sdfValuesBuffer.Release(); sdfValuesBuffer = null; }
+        if (sdfGradientBuffer != null) { sdfGradientBuffer.Release(); sdfGradientBuffer = null; }
     }
 
     void OnDrawGizmos()
@@ -411,7 +422,7 @@ public class FluidBridge : MonoBehaviour
         Gizmos.color = UnityEngine.Color.blue;
         Vector2 tl = new Vector2(-sdfSize.x, sdfSize.y);
         Vector2 br = new Vector2(sdfSize.x, -sdfSize.y);
-        Gizmos.DrawLine(sdfSize,tl);
+        Gizmos.DrawLine(sdfSize, tl);
         Gizmos.DrawLine(sdfSize, br);
         Gizmos.DrawLine(-sdfSize, tl);
         Gizmos.DrawLine(-sdfSize, br);

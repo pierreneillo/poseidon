@@ -569,8 +569,8 @@ Transform:
   m_GameObject: {fileID: 615406896}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 10}
-  m_LocalScale: {x: 20.000198, y: 9.9999, z: 1}
+  m_LocalPosition: {x: 0.2914, y: -0.1457, z: 10}
+  m_LocalScale: {x: 20.582203, y: 10.290896, z: 1.0291}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1247309895}
@@ -744,7 +744,7 @@ Transform:
   m_GameObject: {fileID: 666249375}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -7.73523, y: -2.43868, z: 0}
+  m_LocalPosition: {x: -8.01, y: 1.33, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 2}
   m_ConstrainProportionsScale: 1
   m_Children: []
@@ -928,7 +928,7 @@ Transform:
   m_GameObject: {fileID: 793264103}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -14.321529, y: -8.8795805, z: 0}
+  m_LocalPosition: {x: -17.99, y: -5.04, z: 0}
   m_LocalScale: {x: 26.640816, y: 11.3082905, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1453,7 +1453,10 @@ VisualEffect:
         m_Name: Particule Color
         m_Overridden: 1
     m_Uint:
-      m_Array: []
+      m_Array:
+      - m_Value: 2000
+        m_Name: NWaterParticles
+        m_Overridden: 1
     m_Int:
       m_Array:
       - m_Value: 1
@@ -1499,18 +1502,18 @@ MonoBehaviour:
   pbfShader: {fileID: 7200000, guid: 8d78bb3a74cbe161397c49aee006136d, type: 3}
   vfxGraph: {fileID: 1154585222}
   particleCount: 2000
-  gridCellCount: 2048
+  gridCellCount: 200000
   maxParticlesPerCell: 128
   cellSize: 0.5
-  smoothingRadius: 0.5
+  smoothingRadius: 0.25
   gravity: {x: 0, y: -9.81}
-  vorticity_epsilon: 0
-  viscosity_c: 0
+  vorticity_epsilon: 0.01
+  viscosity_c: 0.001
   collision_damping: 0
   solverIterations: 10
   spawnMinPos: {x: -3.5, y: -2}
   spawnMaxPos: {x: 3.5, y: 2}
-  rho_0: 100000
+  rho_0: 80
   sdfSize: {x: 20, y: 20}
   sdfResolution: 500
 --- !u!1 &1247309894
@@ -2268,11 +2271,19 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_Size.x
-      value: 0.7382275
+      value: 0.73
+      objectReference: {fileID: 0}
+    - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+      propertyPath: m_Size.y
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_Offset.x
-      value: -0.0072714537
+      value: -0.006
+      objectReference: {fileID: 0}
+    - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+      propertyPath: m_Offset.y
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 9020743381297732780, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: maxJumps

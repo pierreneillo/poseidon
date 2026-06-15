@@ -383,9 +383,9 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   float2 myPos = PredictedPositionsBuffer[ix];
   float lambda_i = LambdaBuffer[ix];
 
-  float k_corr = 0.1f; // constant for artificial pressure
+  float k_corr = 0.0f; // constant for artificial pressure
   int n_corr = 4;
-  float dq_dist = 0.2f * smoothingRadius; // Delta q
+  float dq_dist = 0.1f * smoothingRadius; // Delta q
 
   float w_dq = Poly6Kernel2D(dq_dist, smoothingRadius);
 
@@ -423,7 +423,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
     }
   }
 
-  float max_displacement = .5 * smoothingRadius;
+  float max_displacement = .25 * smoothingRadius;
   float2 displacement = delta_p / rho_0;
 
   if (length(displacement) > max_displacement) {
@@ -515,7 +515,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
           float w_ij = Poly6Kernel2D(dist, smoothingRadius);
           xsphVelocityCorrection +=
-              (neighbourVelocity - intermediateVelocity) * w_ij;
+              vdiff * w_ij;
         }
       }
     }
