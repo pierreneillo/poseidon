@@ -40,6 +40,9 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private Vector2 spawnMaxPos = new Vector2(5f, 7f);
     [SerializeField] private float rho_0 = 1000.0f;
 
+    [SerializeField] private float surfaceTension_c = 0.05f;
+    [SerializeField] private float tensionBreakingTreshold = 0.75f;
+
     // Kernels ID
     private int kernelClear;
     private int kernelBuild;
@@ -108,8 +111,6 @@ public class FluidBridge : MonoBehaviour
     {
         if (id > 0 && id < max_obstacles) activeObstacles[id] = null;
     }
-
-
 
     void Start()
     {
@@ -309,7 +310,8 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetFloat("collision_damping", collision_damping);
             pbfShader.SetFloat("rho_0", rho_0);
             pbfShader.SetInt("ObstacleCount", currentCount);
-
+            pbfShader.SetFloat("surface_tension_c", surfaceTension_c);
+            pbfShader.SetFloat("tension_breaking_treshold", tensionBreakingTreshold);
 
             timer.Restart();
 

@@ -67,6 +67,8 @@ cbuffer SimulationSettings {
   uint ObstacleCount;
   int sdfResolution;
   float2 sdfSize;
+  float surface_tension_c;
+  float tension_breaking_treshold;
 };
 
 // TODO : Bitonic sort
@@ -480,6 +482,8 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   int2 centerCell = int2(floor(predPos / cellSize));
   float omega = Vorticity[ix];
 
+  float2 surface_tension_force = 0.0f;
+
   for (int i = -1; i <= 1; i++)
     for (int j = -1; j <= 1; j++) {
       int2 cell = centerCell + int2(i, j);
@@ -505,6 +509,20 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
           float w_ij = Poly6Kernel2D(dist, smoothingRadius);
           xsphVelocityCorrection +=
               vdiff * w_ij;
+
+          // calculus of surface tension
+
+          if (dist > 0.0001f && dist < smoothingRadius) {
+            // based on Akinci & Teschner work
+            float cohesionKernel = 1.0f - pow(dist / smoothingRadius, 3.0f);
+            // breaking treshold condition: if the particle goes away too fast from its neighbour then tension surface "breaks" locally 
+            float2 relativeVelocity = intermediateVelocity - neighbourVelocity;
+            float separationSpeed = dot(relativeVelocity, normalize(r));
+
+            if (separationSpeed < tension_breaking_treshold) {
+              surface_tension_force -= surface_tension_c * cohesionKernel * (r / dist);
+            }
+          }
         }
       }
     }
@@ -517,6 +535,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   p.position = predPos;
   p.velocity = intermediateVelocity + f_vorticity * dt +
-               viscosity_c * xsphVelocityCorrection;
+               viscosity_c * xsphVelocityCorrection +
+               surface_tension_force * dt;
   Particles[ix] = p;
 }
