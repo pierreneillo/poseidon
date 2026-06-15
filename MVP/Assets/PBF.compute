@@ -167,9 +167,11 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
     float2 extDir = resolvedPos - closestPoint;
     float extDistSq = dot(extDir, extDir);
     
+    [branch]
     if (extDistSq > 0.0001f) {
       // the center of the particle is outside, but it might still intersects the rectangle
       float extDist = sqrt(extDistSq);
+      [branch]
       if (extDist < r) {
         resolvedPos = closestPoint + (extDir / extDist) * r;
         if (registerFeedback && o > 0) {
