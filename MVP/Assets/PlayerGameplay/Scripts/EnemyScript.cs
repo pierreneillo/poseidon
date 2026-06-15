@@ -1,16 +1,25 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
     // Public attributes
     [Header("Obstacle detection")]
-    public float wallCheckDistance = 0.5f;
-    public float groundCheckDistance = 1.0f;
-    public Vector2 groundCheckOffset;
-    public LayerMask obstacleLayer;
+    [SerializeField] private float wallCheckDistance = 0.5f;
+    [SerializeField] private float groundCheckDistance = 1.0f;
+    [SerializeField] private Vector2 groundCheckOffset;
+    [SerializeField] private LayerMask obstacleLayer;
 
-    [Header("Movement settings")]
-    public float speed = 2;
+
+    [Header("Stats")]
+    [SerializeField] private float speed = 2;
+    [SerializeField] private float maxHp = 15f;
+    private float hp;
+
+    [Header("Rendering")]
+    [SerializeField] private SpriteRenderer hpBar;
+    private Vector2 hpBarSize;
+
 
     // Private attributes
     private Rigidbody2D _rb;
@@ -24,6 +33,8 @@ public class Enemy : MonoBehaviour
         GPUObstacleID = FluidBridge.RegisterObstacle(this);
         _rb = GetComponent<Rigidbody2D>();
         _initScaleX = transform.localScale.x;
+        hp = maxHp;
+        hpBarSize = hpBar.transform.localScale;
     }
 
     void Update()
@@ -55,6 +66,24 @@ public class Enemy : MonoBehaviour
         Vector2 origin = (Vector2)transform.position + groundCheckOffset + wallCheckDistance * direction;
         RaycastHit2D hit = Physics2D.Raycast(origin, Vector2.down, groundCheckDistance, obstacleLayer);
         return hit.collider != null;
+    }
+
+
+    public bool InflictDamage(float damages)
+    {
+        hp -= damages;
+        if (hp <= 0)
+        {
+            Debug.Log("DEAD");
+            Destroy(gameObject);
+            return true;
+        }
+
+        hpBar.transform.localScale = Vector2.Lerp(new Vector2(0f, hpBarSize.y), hpBarSize, hp/maxHp);
+        hpBar.color = Color.Lerp(Color.red, Color.green, hp / maxHp);
+
+        Debug.Log(hp);
+        return false;
     }
 
     void OnDrawGizmos()

@@ -389,11 +389,13 @@ public class FluidBridge : MonoBehaviour
                 // TODO: change what happens when enemies get hit
                 for (int i = 1; i < max_obstacles; i++)
                 {
-                    if (nativeArray[i] > 40 && activeObstacles[i] != null)
+                    if (nativeArray[i] > 5 && activeObstacles[i] != null)
                     {
-                        UnityEngine.Debug.Log($"[Poseidon] Destruction pf {activeObstacles[i].name}.");
-                        Destroy(activeObstacles[i].gameObject);
-                        activeObstacles[i] = null;
+                        // Damage enemy
+                        if (activeObstacles[i].InflictDamage(1f))
+                        {
+                            activeObstacles[i] = null;
+                        }
                     }
                 }
 
