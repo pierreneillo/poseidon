@@ -1514,6 +1514,8 @@ MonoBehaviour:
   spawnMinPos: {x: -7, y: -2}
   spawnMaxPos: {x: 7, y: 2}
   rho_0: 80
+  surfaceTension_c: 0.05
+  tensionBreakingTreshold: 1000
   sdfSize: {x: 20, y: 20}
   sdfResolution: 1000
 --- !u!1 &1247309894
