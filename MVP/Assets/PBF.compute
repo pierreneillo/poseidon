@@ -62,7 +62,6 @@ cbuffer SimulationSettings {
   float2 gravity;
   float vorticity_epsilon;
   float viscosity_c;
-  float collision_damping;
   float rho_0;
   uint ObstacleCount;
   int sdfResolution;
