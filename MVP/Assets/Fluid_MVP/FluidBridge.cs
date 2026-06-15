@@ -201,7 +201,7 @@ public class FluidBridge : MonoBehaviour
                         float intDist = Mathf.Min(Mathf.Max(v.x, v.y), 0.0f);
                         float currentSdf = extDist + intDist;
 
-                        // UNION LOGIC (Op�ration CSG) : On ne garde que le mur le plus proche du pixel
+                        // Keep the nearest wall
                         if (currentSdf < minSdfValue)
                         {
                             minSdfValue = currentSdf;
