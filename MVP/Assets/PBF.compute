@@ -95,11 +95,36 @@ uint teschnerHash(int2 cell) {
   return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
 }
 
-float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registerFeedback) {
-  float2 resolvedPos = currentPos;
-  float r = smoothingRadius * 0.15f;
-    
-  for (uint o = 0; o < ObstacleCount; o++) {
+float2 resolveCircleCollision(uint o, float2 currentPos, uint particleDataId, bool registerFeedback){
+    float2 minP = ObstaclesBuffer[o].minPos;
+    float2 maxP = ObstaclesBuffer[o].maxPos;
+
+
+    float2 center = (minP + maxP) / 2.f;
+    float radius = (maxP.x - minP.x) /2.f;
+    float totalRadius  = radius + smoothingRadius;
+
+    float2 extDir = currentPos - center;
+    float extDistSq = dot(extDir, extDir);
+    [branch]
+    if (extDistSq <= (radius + smoothingRadius) * (radius + smoothingRadius)){
+      // Collision
+      float extDist = sqrt(extDistSq);
+      if (registerFeedback && o > 0) {
+        InterlockedAdd(CollisionFeedbackBuffer[o], 1); // if it is an enemy, we increase its counter
+      }
+      return center + extDir * (totalRadius / extDist);
+    }else{
+      return currentPos;
+    }
+
+}
+
+float2 resolveAABBCollision(uint o, float2 currentPos, uint particleDataId, bool registerFeedback){
+    float r = smoothingRadius;
+    float2 resolvedPos = currentPos;
+
+
     float2 minP = ObstaclesBuffer[o].minPos;
     float2 maxP = ObstaclesBuffer[o].maxPos;
 
@@ -136,6 +161,18 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
         InterlockedAdd(CollisionFeedbackBuffer[o], 1); // if it is an enemy, we increase its counter
       }
     }
+    return resolvedPos;
+}
+
+float2 resolveCollisions(float2 currentPos, uint particleDataId, bool registerFeedback) {
+  float2 resolvedPos = currentPos;
+    
+  for (uint o = 0; o < ObstacleCount; o++) {
+  [branch]
+  if (o == 0)
+    resolvedPos = resolveCircleCollision(o, resolvedPos, particleDataId, registerFeedback);
+  else
+    resolvedPos = resolveAABBCollision(o, resolvedPos, particleDataId, registerFeedback);
   }
   return resolvedPos;
 }
@@ -225,7 +262,7 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
   }
 
   // Handling dynamically collisions (player and enemies)
-  float2 finalPos = resolveAABBCollision(predPos, ix, false);
+  float2 finalPos = resolveCollisions(predPos, ix, false);
   if (dot(finalPos - predPos, finalPos - predPos) > 0.0001f) {
     modified = true;
   }
@@ -361,7 +398,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   myPos += displacement;
 
-  myPos = resolveAABBCollision(myPos, ix, false);
+  myPos = resolveCollisions(myPos, ix, false);
 
   PredictedPositionsBuffer[ix] = myPos;
 };
@@ -455,7 +492,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
     N = grad / gradLength;
   float2 f_vorticity = vorticity_epsilon * float2(N.y * omega, -N.x * omega);
 
-  float2 new_pos = resolveAABBCollision(predPos, ix, true);
+  float2 new_pos = resolveCollisions(predPos, ix, true);
   p.position = predPos;
   p.velocity = intermediateVelocity + f_vorticity * dt +
                viscosity_c * xsphVelocityCorrection;

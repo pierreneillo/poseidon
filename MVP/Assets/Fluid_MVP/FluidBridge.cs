@@ -360,7 +360,7 @@ public class FluidBridge : MonoBehaviour
         PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
         if (player != null)
         {
-            Collider2D col = player.GetComponent<Collider2D>();
+            Collider2D col = player.GetComponent<CircleCollider2D>();
             if (col != null)
             {
                 obstacleData[0].minPos = col.bounds.min;
