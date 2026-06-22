@@ -1614,7 +1614,7 @@ MonoBehaviour:
   solverIterations: 4
   spawnMinPos: {x: -7, y: -2}
   spawnMaxPos: {x: 7, y: 2}
-  rho_0: 80
+  rho_0: 400
   surfaceTension_c: 0.05
   tensionBreakingTreshold: 1000
   sdfSize: {x: 20, y: 20}
