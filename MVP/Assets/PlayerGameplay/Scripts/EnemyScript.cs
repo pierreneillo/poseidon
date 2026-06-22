@@ -18,7 +18,9 @@ public class Enemy : MonoBehaviour
 
     [Header("Rendering")]
     [SerializeField] private SpriteRenderer hpBar;
+    [SerializeField] private SpriteRenderer fire;
     private Vector2 hpBarSize;
+    private Vector2 fireSize;
 
     [SerializeField] private AudioClip[] hitSounds;
     [SerializeField] private AudioClip[] ShoutingSounds;
@@ -30,16 +32,24 @@ public class Enemy : MonoBehaviour
     private Rigidbody2D _rb;
     private int _facingDirection = -1;
     private float _initScaleX;
+    private bool _burning;
 
     public int GPUObstacleID { get; private set; } = -1;
 
     void Start()
     {
+        // Movement
         GPUObstacleID = FluidBridge.RegisterObstacle(this);
         _rb = GetComponent<Rigidbody2D>();
         _initScaleX = transform.localScale.x;
+
+        // HP
         hp = maxHp;
         hpBarSize = hpBar.transform.localScale;
+        fireSize = fire.transform.localScale;
+        _burning = true;
+
+        // Sound design 
         randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
     }
 
@@ -50,16 +60,20 @@ public class Enemy : MonoBehaviour
             SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound],transform, 0.3f);
         }
 
-        bool hasWall = CheckWall();
-        bool hasGround = CheckGround();
-
-        if (hasWall || !hasGround)
+        if (_burning)
         {
-            _facingDirection *= -1;
-            transform.localScale = new Vector2(-_facingDirection * _initScaleX, transform.localScale.y);
-        }
+            bool hasWall = CheckWall();
+            bool hasGround = CheckGround();
 
-        _rb.linearVelocityX = _facingDirection * speed;
+            if (hasWall || !hasGround)
+            {
+                _facingDirection *= -1;
+                transform.localScale = new Vector2(-_facingDirection * _initScaleX, transform.localScale.y);
+            }
+
+            _rb.linearVelocityX = _facingDirection * speed;
+        }
+        
 
     }
 
@@ -81,20 +95,37 @@ public class Enemy : MonoBehaviour
 
     public bool InflictDamage(float damages)
     {
-        int rand = Random.Range(0, hitSounds.Length);
-        AudioSource.PlayClipAtPoint(hitSounds[rand],transform.position, 0.5f);
-        hp -= damages;
-        if (hp <= 0)
+        if (_burning)
         {
-            Debug.Log("DEAD");
-            Destroy(gameObject);
-            return true;
+            // Audio
+            int rand = Random.Range(0, hitSounds.Length);
+            AudioSource.PlayClipAtPoint(hitSounds[rand], transform.position, 0.5f);
+
+            // HP management
+            hp -= damages;
+
+
+            if (hp <= 0)
+            {
+                Debug.Log("DEAD");
+                FluidBridge.UnregisterObstacle(GPUObstacleID);
+                Destroy(hpBar);
+                Destroy(fire);
+
+                _burning = false;
+                return true;
+            }
+
+
+            // HP bar and Fire
+            hpBar.transform.localScale = Vector2.Lerp(new Vector2(0f, hpBarSize.y), hpBarSize, hp / maxHp);
+            hpBar.color = Color.Lerp(Color.red, Color.green, hp / maxHp);
+            fire.transform.localScale = Vector2.Lerp(Vector2.zero, fireSize, hp / maxHp);
+
+
+            return false;
         }
 
-        hpBar.transform.localScale = Vector2.Lerp(new Vector2(0f, hpBarSize.y), hpBarSize, hp/maxHp);
-        hpBar.color = Color.Lerp(Color.red, Color.green, hp / maxHp);
-
-        Debug.Log(hp);
         return false;
     }
 
@@ -110,7 +141,6 @@ public class Enemy : MonoBehaviour
     }
 
     void OnDestroy() {
-        FluidBridge.UnregisterObstacle(GPUObstacleID);
         SoundManager.instance.KillSound();
     }
 }

@@ -34,6 +34,6 @@ public class SoundManager : MonoBehaviour
     }
 
     public void KillSound(){
-        Destroy(audioSource.gameObject);
+        if(audioSource) Destroy(audioSource.gameObject);
     }
 }
