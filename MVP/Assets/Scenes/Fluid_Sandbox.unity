@@ -356,8 +356,8 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
-  m_Antialiasing: 0
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 1
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -569,8 +569,8 @@ Transform:
   m_GameObject: {fileID: 615406896}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 10}
-  m_LocalScale: {x: 20, y: 10, z: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 100}
+  m_LocalScale: {x: 17.777779, y: 10, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1247309895}
@@ -1325,6 +1325,11 @@ SpriteRenderer:
   m_SpriteTileMode: 0
   m_WasSpriteAssigned: 1
   m_SpriteSortPoint: 0
+--- !u!1 &864044612 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6514636034466688514, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+  m_PrefabInstance: {fileID: 7648219268716735961}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &910436260
 GameObject:
   m_ObjectHideFlags: 0
@@ -1350,7 +1355,7 @@ Transform:
   m_GameObject: {fileID: 910436260}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.33, y: -0.2, z: 0}
+  m_LocalPosition: {x: 0.43, y: 0.35, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1531,7 +1536,7 @@ VisualEffect:
   m_PropertySheet:
     m_Float:
       m_Array:
-      - m_Value: 1
+      - m_Value: 0.5
         m_Name: Size
         m_Overridden: 1
     m_Vector2f:
@@ -1592,19 +1597,24 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   pbfShader: {fileID: 7200000, guid: 8d78bb3a74cbe161397c49aee006136d, type: 3}
   vfxGraph: {fileID: 1154585222}
-  particleCount: 100
+  throwWaterAction: {fileID: -4045286083818548909, guid: 3ed3d43635a11d86b9c0778b0bc7880f, type: 3}
+  particlesPerFrame: 5
+  spawnPoint: {fileID: 910436261}
+  spawnRadius: 0.05
+  initialVelocity: 12
+  sprayAngle: 0.2
+  maxParticleCount: 20000
   gridCellCount: 200000
-  maxParticlesPerCell: 128
-  cellSize: 0.5
-  smoothingRadius: 0.25
+  maxParticlesPerCell: 64
+  cellSize: 0.2
+  smoothingRadius: 0.1
   gravity: {x: 0, y: -9.81}
-  vorticity_epsilon: 0.01
-  viscosity_c: 0.001
-  collision_damping: 0
+  vorticity_epsilon: 0.0001
+  viscosity_c: 0.0005
   solverIterations: 4
   spawnMinPos: {x: -7, y: -2}
   spawnMaxPos: {x: 7, y: 2}
-  rho_0: 80
+  rho_0: 400
   sdfSize: {x: 20, y: 20}
   sdfResolution: 1000
 --- !u!1 &1247309894
@@ -1847,7 +1857,7 @@ Transform:
   m_GameObject: {fileID: 1339178765}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 10.902589, y: 0.7644644, z: 0}
+  m_LocalPosition: {x: 12.77, y: 0.7, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1889,7 +1899,7 @@ BoxCollider2D:
   m_UsedByEffector: 0
   m_CompositeOperation: 0
   m_CompositeOrder: 0
-  m_Offset: {x: 0.07992005, y: 0.0054183304}
+  m_Offset: {x: 0.06764555, y: -0.07349041}
   m_SpriteTilingProperty:
     border: {x: 0, y: 0, z: 0, w: 0}
     pivot: {x: 0.5, y: 0.5}
@@ -1899,7 +1909,7 @@ BoxCollider2D:
     drawMode: 0
     adaptiveTiling: 0
   m_AutoTiling: 0
-  m_Size: {x: 1.2169814, y: 0.61529917}
+  m_Size: {x: 0.93290997, y: 0.45748168}
   m_EdgeRadius: 0
 --- !u!50 &1339178771
 Rigidbody2D:
@@ -2403,12 +2413,48 @@ MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 9020743381297732780, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
   m_PrefabInstance: {fileID: 7648219268716735961}
   m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 0}
+  m_GameObject: {fileID: 864044612}
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: d3bd3d75f28aaf6aca9b32999b655eaf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Assembly-CSharp::PlayerScript
+--- !u!58 &4435157815649150798
+CircleCollider2D:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 864044612}
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Density: 1
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_LayerOverridePriority: 0
+  m_ForceSendLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ForceReceiveLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_ContactCaptureLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_CallbackLayers:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_IsTrigger: 0
+  m_UsedByEffector: 0
+  m_CompositeOperation: 0
+  m_CompositeOrder: 0
+  m_Offset: {x: 0, y: 0.15}
+  m_Radius: 0.3
 --- !u!1001 &7648219268716735961
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2493,6 +2539,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: Player
       objectReference: {fileID: 0}
+    - target: {fileID: 7017907750219030324, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+      propertyPath: m_Actions
+      value: 
+      objectReference: {fileID: -944628639613478452, guid: 3ed3d43635a11d86b9c0778b0bc7880f, type: 3}
+    - target: {fileID: 7017907750219030324, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+      propertyPath: m_DefaultActionMap
+      value: Player
+      objectReference: {fileID: 0}
     - target: {fileID: 7420012818841080123, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_LocalPosition.x
       value: 0
@@ -2539,15 +2593,15 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_Size.y
-      value: 1
+      value: 1.1265025
       objectReference: {fileID: 0}
     - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_Offset.x
-      value: -0.006
+      value: -0.006000012
       objectReference: {fileID: 0}
     - target: {fileID: 8177213170485575849, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_Offset.y
-      value: 0
+      value: 0.06325166
       objectReference: {fileID: 0}
     - target: {fileID: 9020743381297732780, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: maxJumps
@@ -2575,7 +2629,10 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 7420012818841080123, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       insertIndex: -1
       addedObject: {fileID: 910436261}
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6514636034466688514, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4435157815649150798}
   m_SourcePrefab: {fileID: 100100000, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
 --- !u!1660057539 &9223372036854775807
 SceneRoots:
