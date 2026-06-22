@@ -20,6 +20,11 @@ public class Enemy : MonoBehaviour
     [SerializeField] private SpriteRenderer hpBar;
     private Vector2 hpBarSize;
 
+    [SerializeField] private AudioClip[] hitSounds;
+    [SerializeField] private AudioClip[] ShoutingSounds;
+    private int randomCaracterSound;
+
+
 
     // Private attributes
     private Rigidbody2D _rb;
@@ -35,10 +40,15 @@ public class Enemy : MonoBehaviour
         _initScaleX = transform.localScale.x;
         hp = maxHp;
         hpBarSize = hpBar.transform.localScale;
+        randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
     }
 
     void Update()
     {
+        if(!SoundManager.instance.IsTalking()){
+            // AudioSource.PlayClipAtPoint(ShoutingSounds[randomCaracterSound],transform.position, 0.3f);
+            SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound],transform, 0.3f);
+        }
 
         bool hasWall = CheckWall();
         bool hasGround = CheckGround();
@@ -71,6 +81,8 @@ public class Enemy : MonoBehaviour
 
     public bool InflictDamage(float damages)
     {
+        int rand = Random.Range(0, hitSounds.Length);
+        AudioSource.PlayClipAtPoint(hitSounds[rand],transform.position, 0.5f);
         hp -= damages;
         if (hp <= 0)
         {
@@ -99,5 +111,6 @@ public class Enemy : MonoBehaviour
 
     void OnDestroy() {
         FluidBridge.UnregisterObstacle(GPUObstacleID);
+        SoundManager.instance.KillSound();
     }
 }
