@@ -48,6 +48,9 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private Vector2 spawnMaxPos = new Vector2(5f, 7f);
     [SerializeField] private float rho_0 = 1000.0f;
 
+    [SerializeField] private float surfaceTension_c = 0.05f;
+    [SerializeField] private float tensionBreakingTreshold = 0.75f;
+
     // Kernels ID
     private int kernelClear;
     private int kernelBuild;
@@ -421,7 +424,8 @@ public class FluidBridge : MonoBehaviour
 
             // send constant parameters to the cbuffer
             pbfShader.SetInt("ParticleCount", (int)particleCount);
-
+            pbfShader.SetFloat("surface_tension_c", surfaceTension_c);
+            pbfShader.SetFloat("tension_breaking_treshold", tensionBreakingTreshold);
 
             timer.Restart();
 
