@@ -304,7 +304,6 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetFloat("vorticity_epsilon", vorticity_epsilon);
         pbfShader.SetFloat("viscosity_c", viscosity_c);
         pbfShader.SetFloat("rho_0", rho_0);
-        pbfShader.SetInt("ObstacleCount", currentCount);
 
 
 
@@ -314,6 +313,7 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
         pbfShader.SetBuffer(kernelPredict, "Colors", debugColorBuffer);
         pbfShader.SetBuffer(kernelPredict, "ObstaclesBuffer", obstaclesBuffer);
+        pbfShader.SetBuffer(kernelPredict, "CollisionFeedbackBuffer", collisionFeedbackBuffer);
         pbfShader.SetBuffer(kernelPredict, "SdfValuesBuffer", sdfValuesBuffer);
         pbfShader.SetBuffer(kernelPredict, "SdfGradientBuffer", sdfGradientBuffer);
 
@@ -346,6 +346,8 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetBuffer(kernelUpdateParticles, "PredictedPositionsBuffer", predictedPositionsBuffer);
         pbfShader.SetBuffer(kernelUpdateParticles, "ParticlesInCell", particlesInCellBuffer);
         pbfShader.SetBuffer(kernelUpdateParticles, "NInCell", nInCellBuffer);
+        pbfShader.SetBuffer(kernelUpdateParticles, "ObstaclesBuffer", obstaclesBuffer);
+        pbfShader.SetBuffer(kernelUpdateParticles, "CollisionFeedbackBuffer", collisionFeedbackBuffer);
 
     }
 
@@ -395,6 +397,8 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetFloat("vorticity_epsilon", vorticity_epsilon);
         pbfShader.SetFloat("viscosity_c", viscosity_c);
         pbfShader.SetFloat("rho_0", rho_0);
+        pbfShader.SetInt("ObstacleCount", currentCount);
+
 
 
 
@@ -422,7 +426,6 @@ public class FluidBridge : MonoBehaviour
             timer.Restart();
 
             // Predict positions
-
             pbfShader.Dispatch(kernelPredict, threadGroupsParticles, 1, 1);
 
             pbfShader.Dispatch(kernelClear, threadGroupsGrid, 1, 1);
@@ -473,9 +476,11 @@ public class FluidBridge : MonoBehaviour
                 // TODO: change what happens when enemies get hit
                 for (int i = 1; i < max_obstacles; i++)
                 {
+                    if (activeObstacles[i] != null)
+                        UnityEngine.Debug.Log($"[Poseidon] [{activeObstacles[i].name} n°{i}] Particles touched : {nativeArray[i]}");
                     if (nativeArray[i] > 40 && activeObstacles[i] != null)
                     {
-                        UnityEngine.Debug.Log($"[Poseidon] Destruction pf {activeObstacles[i].name}.");
+                        UnityEngine.Debug.Log($"[Poseidon] Destruction of {activeObstacles[i].name}.");
                         Destroy(activeObstacles[i].gameObject);
                         activeObstacles[i] = null;
                     }

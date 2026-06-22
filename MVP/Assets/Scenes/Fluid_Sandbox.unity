@@ -356,8 +356,8 @@ MonoBehaviour:
     m_Bits: 1
   m_VolumeTrigger: {fileID: 0}
   m_VolumeFrameworkUpdateModeOption: 2
-  m_RenderPostProcessing: 0
-  m_Antialiasing: 0
+  m_RenderPostProcessing: 1
+  m_Antialiasing: 1
   m_AntialiasingQuality: 2
   m_StopNaN: 0
   m_Dithering: 0
@@ -570,7 +570,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
   m_LocalPosition: {x: 0, y: 0, z: 100}
-  m_LocalScale: {x: 20, y: 10, z: 1}
+  m_LocalScale: {x: 17.777779, y: 10, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 1247309895}
@@ -1259,7 +1259,7 @@ Transform:
   m_GameObject: {fileID: 910436260}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.33, y: -0.2, z: 0}
+  m_LocalPosition: {x: 0.18, y: 0.4, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1502,19 +1502,19 @@ MonoBehaviour:
   pbfShader: {fileID: 7200000, guid: 8d78bb3a74cbe161397c49aee006136d, type: 3}
   vfxGraph: {fileID: 1154585222}
   throwWaterAction: {fileID: -4045286083818548909, guid: 3ed3d43635a11d86b9c0778b0bc7880f, type: 3}
-  particlesPerFrame: 3
+  particlesPerFrame: 16
   spawnPoint: {fileID: 910436261}
   spawnRadius: 0.05
-  initialVelocity: 15
-  sprayAngle: 0.3
-  maxParticleCount: 20000
+  initialVelocity: 12
+  sprayAngle: 0
+  maxParticleCount: 100000
   gridCellCount: 200000
   maxParticlesPerCell: 64
   cellSize: 0.2
   smoothingRadius: 0.1
   gravity: {x: 0, y: -9.81}
-  vorticity_epsilon: 0
-  viscosity_c: 0.001
+  vorticity_epsilon: 0.0001
+  viscosity_c: 0.0005
   solverIterations: 4
   spawnMinPos: {x: -7, y: -2}
   spawnMaxPos: {x: 7, y: 2}

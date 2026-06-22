@@ -68,65 +68,6 @@ cbuffer SimulationSettings {
   float2 sdfSize;
 };
 
-// TODO : Bitonic sort
-
-// uint extend(uint v){
-//     // We "extend" the bits (interleave with zeros) using magic numbers
-//     uint x = v & 0x0000FFFF;
-//     x = (x | (x <<  8)) & 0x00FF00FF;
-//     x = (x | (x <<  4)) & 0x0F0F0F0F;
-//     x = (x | (x <<  2)) & 0x33333333;
-//     x = (x | (x <<  1)) & 0x55555555;
-//     return x;
-// }
-
-// /*Gives the Morton hash of a given cell*/
-// uint hash(uint2 cell){
-//     // We hash the cell index by interleaving the bits (morton curve)
-//     return extend(cell.x) | (extend(cell.y) << 1);
-// }
-
-// /*Gives the Morton hash of the cell the point is in*/
-// uint hash(float2 position){
-//     // We first need to compute cell index
-//     return hash(uint2(floor(position.x / cellSize), floor(position.y /
-//     cellSize)));
-// }
-
-// [numthreads(64,1,1)]
-// void calculateHash(uint3 id : SV_DispatchThreadID){
-//     uint ix = id.x;
-//     if (ix < ParticleCount){
-//         // We update the hash of the given particle
-//         Hashes[ix].hash = hash(Particles[Hashes[ix].pid].position);
-//     }
-// }
-
-// cbuffer BitonicSortParams{
-//     uint GroupWidth;
-//     uint ComparingDistance;
-// };
-
-// void swapHashes(uint i, uint j){
-//     Hash h = Hashes[i];
-//     Hashes[i] = Hashes[j];
-//     Hashes[j] = h;
-// }
-
-// [numthreads(64,1,1)]
-// void BitonicCompare(uint3 id : SV_DispatchThreadID){
-//     uint ix = id.x;
-//     // We have to calculate the left and right indices
-//     // If the right index is greater than particleCount, we can drop the
-//     comparison uint left = ; uint right = left + d; if (right <
-//     ParticleCount){
-//         if (Hashes[left].hash > Hash[right].hash)
-//             // We have to swap
-//             swapHashes(left, right);
-
-//     }
-// }
-
 float cross2D(float2 a, float2 b) { return a.x * b.y - a.y * b.x; }
 
 float Poly6Kernel2D(float dist, float h) {
@@ -420,7 +361,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   myPos += displacement;
 
-  myPos = resolveAABBCollision(myPos, ix, true);
+  myPos = resolveAABBCollision(myPos, ix, false);
 
   PredictedPositionsBuffer[ix] = myPos;
 };
@@ -514,6 +455,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
     N = grad / gradLength;
   float2 f_vorticity = vorticity_epsilon * float2(N.y * omega, -N.x * omega);
 
+  float2 new_pos = resolveAABBCollision(predPos, ix, true);
   p.position = predPos;
   p.velocity = intermediateVelocity + f_vorticity * dt +
                viscosity_c * xsphVelocityCorrection;
