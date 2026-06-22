@@ -46,13 +46,13 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Enable();  // Makes it possible to use actions inside action maps in Unity (predefined actions of the rendering engine) => we find in action maps : Player -> lot of actions (for instance Player -> Move for next line) ; thus we setup settings
 		actions.Player.Move.performed += Movement;  // Assign the Method "Movement" written below to the performance of a movement
 		actions.Player.Jump.performed += Jumping;   // Same thing with "Jumping"
-		actions.Player.SpecialAttack1.performed += SpecialAttack1;
 		actions.Player.Attack.performed += TriggerProjectile;
+		actions.Player.ThrowWater.performed += OnThrowWaterInput;
 
-		actions.Player.Move.canceled += Movement;
+        actions.Player.Move.canceled += Movement;
 		actions.Player.Jump.canceled += Jumping;
-		actions.Player.SpecialAttack1.canceled += SpecialAttack1;
 		actions.Player.Attack.canceled += TriggerProjectile;
+		actions.Player.ThrowWater.canceled += OnThrowWaterInput;
 	}
 
 	// Opposite of OnEnable() -> cleaning usage (otherwise, the OnEnable() may be triggered once, then twice, ... then 10 times without freeing memory...)
@@ -61,9 +61,11 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Disable();
 		actions.Player.Move.performed -= Movement;
 		actions.Player.Jump.performed -= Jumping;
-		actions.Player.SpecialAttack1.performed -= SpecialAttack1;
 		actions.Player.Attack.performed -= TriggerProjectile;
-	}
+
+        actions.Player.ThrowWater.performed -= OnThrowWaterInput;
+        actions.Player.ThrowWater.canceled -= OnThrowWaterInput;
+    }
 
 
 
@@ -94,14 +96,6 @@ public class PlayerScript : MonoBehaviour
 
 	}
 
-	void SpecialAttack1(InputAction.CallbackContext ctx)
-	{
-		if (ctx.performed)
-		{
-			_rb.linearVelocityY = -jumpStrength;
-		}
-	}
-
 	void TriggerProjectile(InputAction.CallbackContext ctx)
 	{
 		if (ctx.performed)
@@ -130,14 +124,18 @@ public class PlayerScript : MonoBehaviour
 
 
 
+    private void OnThrowWaterInput(InputAction.CallbackContext context)
+    {
+        if (context.performed) animator.SetBool("isThrowing", true);
+        if (context.canceled) animator.SetBool("isThrowing", false);
+    }
 
 
 
 
-
-	// Start is called once before the first execution of Update after the MonoBehavior is created
-	// "The Game starts"
-	void Start()
+    // Start is called once before the first execution of Update after the MonoBehavior is created
+    // "The Game starts"
+    void Start()
 	{
 		_rb = GetComponent<Rigidbody2D>();    // Link the Rigidbody2D specified on the editor 
 		_scale = transform.localScale;
