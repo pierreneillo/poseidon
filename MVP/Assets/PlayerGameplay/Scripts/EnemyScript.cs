@@ -1,44 +1,79 @@
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
     // Public attributes
     [Header("Obstacle detection")]
-    public float wallCheckDistance = 0.5f;
-    public float groundCheckDistance = 1.0f;
-    public Vector2 groundCheckOffset;
-    public LayerMask obstacleLayer;
+    [SerializeField] private float wallCheckDistance = 0.5f;
+    [SerializeField] private float groundCheckDistance = 1.0f;
+    [SerializeField] private Vector2 groundCheckOffset;
+    [SerializeField] private LayerMask obstacleLayer;
 
-    [Header("Movement settings")]
-    public float speed = 2;
+
+    [Header("Stats")]
+    [SerializeField] private float speed = 2;
+    [SerializeField] private float maxHp = 15f;
+    private float hp;
+
+    [Header("Rendering")]
+    [SerializeField] private SpriteRenderer hpBar;
+    [SerializeField] private SpriteRenderer fire;
+    private Vector2 hpBarSize;
+    private Vector2 fireSize;
+
+    [SerializeField] private AudioClip[] hitSounds;
+    [SerializeField] private AudioClip[] ShoutingSounds;
+    private int randomCaracterSound;
+
+
 
     // Private attributes
     private Rigidbody2D _rb;
     private int _facingDirection = -1;
     private float _initScaleX;
+    private bool _burning;
 
     public int GPUObstacleID { get; private set; } = -1;
 
     void Start()
     {
+        // Movement
         GPUObstacleID = FluidBridge.RegisterObstacle(this);
         _rb = GetComponent<Rigidbody2D>();
         _initScaleX = transform.localScale.x;
+
+        // HP
+        hp = maxHp;
+        hpBarSize = hpBar.transform.localScale;
+        fireSize = fire.transform.localScale;
+        _burning = true;
+
+        // Sound design 
+        randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
     }
 
     void Update()
     {
-
-        bool hasWall = CheckWall();
-        bool hasGround = CheckGround();
-
-        if (hasWall || !hasGround)
-        {
-            _facingDirection *= -1;
-            transform.localScale = new Vector2(-_facingDirection * _initScaleX, transform.localScale.y);
+        if(!SoundManager.instance.IsTalking()){
+            // AudioSource.PlayClipAtPoint(ShoutingSounds[randomCaracterSound],transform.position, 0.3f);
+            SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound],transform, 0.3f);
         }
 
-        _rb.linearVelocityX = _facingDirection * speed;
+        if (_burning)
+        {
+            bool hasWall = CheckWall();
+            bool hasGround = CheckGround();
+
+            if (hasWall || !hasGround)
+            {
+                _facingDirection *= -1;
+                transform.localScale = new Vector2(-_facingDirection * _initScaleX, transform.localScale.y);
+            }
+
+            _rb.linearVelocityX = _facingDirection * speed;
+        }
+        
 
     }
 
@@ -57,6 +92,43 @@ public class Enemy : MonoBehaviour
         return hit.collider != null;
     }
 
+
+    public bool InflictDamage(float damages)
+    {
+        if (_burning)
+        {
+            // Audio
+            int rand = Random.Range(0, hitSounds.Length);
+            AudioSource.PlayClipAtPoint(hitSounds[rand], transform.position, 0.5f);
+
+            // HP management
+            hp -= damages;
+
+
+            if (hp <= 0)
+            {
+                Debug.Log("DEAD");
+                FluidBridge.UnregisterObstacle(GPUObstacleID);
+                Destroy(hpBar);
+                Destroy(fire);
+
+                _burning = false;
+                return true;
+            }
+
+
+            // HP bar and Fire
+            hpBar.transform.localScale = Vector2.Lerp(new Vector2(0f, hpBarSize.y), hpBarSize, hp / maxHp);
+            hpBar.color = Color.Lerp(Color.red, Color.green, hp / maxHp);
+            fire.transform.localScale = Vector2.Lerp(Vector2.zero, fireSize, hp / maxHp);
+
+
+            return false;
+        }
+
+        return false;
+    }
+
     void OnDrawGizmos()
     {
         Gizmos.color = Color.red;
@@ -69,6 +141,6 @@ public class Enemy : MonoBehaviour
     }
 
     void OnDestroy() {
-        FluidBridge.UnregisterObstacle(GPUObstacleID);
+        SoundManager.instance.KillSound();
     }
 }

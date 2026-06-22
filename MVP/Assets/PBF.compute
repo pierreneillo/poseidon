@@ -62,71 +62,13 @@ cbuffer SimulationSettings {
   float2 gravity;
   float vorticity_epsilon;
   float viscosity_c;
-  float collision_damping;
   float rho_0;
   uint ObstacleCount;
   int sdfResolution;
   float2 sdfSize;
+  float surface_tension_c;
+  float tension_breaking_treshold;
 };
-
-// TODO : Bitonic sort
-
-// uint extend(uint v){
-//     // We "extend" the bits (interleave with zeros) using magic numbers
-//     uint x = v & 0x0000FFFF;
-//     x = (x | (x <<  8)) & 0x00FF00FF;
-//     x = (x | (x <<  4)) & 0x0F0F0F0F;
-//     x = (x | (x <<  2)) & 0x33333333;
-//     x = (x | (x <<  1)) & 0x55555555;
-//     return x;
-// }
-
-// /*Gives the Morton hash of a given cell*/
-// uint hash(uint2 cell){
-//     // We hash the cell index by interleaving the bits (morton curve)
-//     return extend(cell.x) | (extend(cell.y) << 1);
-// }
-
-// /*Gives the Morton hash of the cell the point is in*/
-// uint hash(float2 position){
-//     // We first need to compute cell index
-//     return hash(uint2(floor(position.x / cellSize), floor(position.y /
-//     cellSize)));
-// }
-
-// [numthreads(64,1,1)]
-// void calculateHash(uint3 id : SV_DispatchThreadID){
-//     uint ix = id.x;
-//     if (ix < ParticleCount){
-//         // We update the hash of the given particle
-//         Hashes[ix].hash = hash(Particles[Hashes[ix].pid].position);
-//     }
-// }
-
-// cbuffer BitonicSortParams{
-//     uint GroupWidth;
-//     uint ComparingDistance;
-// };
-
-// void swapHashes(uint i, uint j){
-//     Hash h = Hashes[i];
-//     Hashes[i] = Hashes[j];
-//     Hashes[j] = h;
-// }
-
-// [numthreads(64,1,1)]
-// void BitonicCompare(uint3 id : SV_DispatchThreadID){
-//     uint ix = id.x;
-//     // We have to calculate the left and right indices
-//     // If the right index is greater than particleCount, we can drop the
-//     comparison uint left = ; uint right = left + d; if (right <
-//     ParticleCount){
-//         if (Hashes[left].hash > Hash[right].hash)
-//             // We have to swap
-//             swapHashes(left, right);
-
-//     }
-// }
 
 float cross2D(float2 a, float2 b) { return a.x * b.y - a.y * b.x; }
 
@@ -155,11 +97,36 @@ uint teschnerHash(int2 cell) {
   return ((uint)cell.x * 73856093 ^ (uint)cell.y * 19349663) % GridCellCount;
 }
 
-float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registerFeedback) {
-  float2 resolvedPos = currentPos;
-  float r = smoothingRadius * 0.15f;
-    
-  for (uint o = 0; o < ObstacleCount; o++) {
+float2 resolveCircleCollision(uint o, float2 currentPos, uint particleDataId, bool registerFeedback){
+    float2 minP = ObstaclesBuffer[o].minPos;
+    float2 maxP = ObstaclesBuffer[o].maxPos;
+
+
+    float2 center = (minP + maxP) / 2.f;
+    float radius = (maxP.x - minP.x) /2.f;
+    float totalRadius  = radius + smoothingRadius;
+
+    float2 extDir = currentPos - center;
+    float extDistSq = dot(extDir, extDir);
+    [branch]
+    if (extDistSq <= (radius + smoothingRadius) * (radius + smoothingRadius)){
+      // Collision
+      float extDist = sqrt(extDistSq);
+      if (registerFeedback && o > 0) {
+        InterlockedAdd(CollisionFeedbackBuffer[o], 1); // if it is an enemy, we increase its counter
+      }
+      return center + extDir * (totalRadius / extDist);
+    }else{
+      return currentPos;
+    }
+
+}
+
+float2 resolveAABBCollision(uint o, float2 currentPos, uint particleDataId, bool registerFeedback){
+    float r = smoothingRadius;
+    float2 resolvedPos = currentPos;
+
+
     float2 minP = ObstaclesBuffer[o].minPos;
     float2 maxP = ObstaclesBuffer[o].maxPos;
 
@@ -167,9 +134,11 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
     float2 extDir = resolvedPos - closestPoint;
     float extDistSq = dot(extDir, extDir);
     
+    [branch]
     if (extDistSq > 0.0001f) {
       // the center of the particle is outside, but it might still intersects the rectangle
       float extDist = sqrt(extDistSq);
+      [branch]
       if (extDist < r) {
         resolvedPos = closestPoint + (extDir / extDist) * r;
         if (registerFeedback && o > 0) {
@@ -194,6 +163,18 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
         InterlockedAdd(CollisionFeedbackBuffer[o], 1); // if it is an enemy, we increase its counter
       }
     }
+    return resolvedPos;
+}
+
+float2 resolveCollisions(float2 currentPos, uint particleDataId, bool registerFeedback) {
+  float2 resolvedPos = currentPos;
+    
+  for (uint o = 0; o < ObstacleCount; o++) {
+  [branch]
+  if (o == 0)
+    resolvedPos = resolveCircleCollision(o, resolvedPos, particleDataId, registerFeedback);
+  else
+    resolvedPos = resolveAABBCollision(o, resolvedPos, particleDataId, registerFeedback);
   }
   return resolvedPos;
 }
@@ -283,7 +264,7 @@ float2 resolveAABBCollision(float2 currentPos, uint particleDataId, bool registe
   }
 
   // Handling dynamically collisions (player and enemies)
-  float2 finalPos = resolveAABBCollision(predPos, ix, false);
+  float2 finalPos = resolveCollisions(predPos, ix, false);
   if (dot(finalPos - predPos, finalPos - predPos) > 0.0001f) {
     modified = true;
   }
@@ -419,7 +400,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   myPos += displacement;
 
-  myPos = resolveAABBCollision(myPos, ix, true);
+  myPos = resolveCollisions(myPos, ix, false);
 
   PredictedPositionsBuffer[ix] = myPos;
 };
@@ -478,6 +459,8 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   int2 centerCell = int2(floor(predPos / cellSize));
   float omega = Vorticity[ix];
 
+  float2 surface_tension_force = 0.0f;
+
   for (int i = -1; i <= 1; i++)
     for (int j = -1; j <= 1; j++) {
       int2 cell = centerCell + int2(i, j);
@@ -503,6 +486,20 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
           float w_ij = Poly6Kernel2D(dist, smoothingRadius);
           xsphVelocityCorrection +=
               vdiff * w_ij;
+
+          // calculus of surface tension
+
+          if (dist > 0.0001f && dist < smoothingRadius) {
+            // based on Akinci & Teschner work
+            float cohesionKernel = 1.0f - pow(dist / smoothingRadius, 3.0f);
+            // breaking treshold condition: if the particle goes away too fast from its neighbour then tension surface "breaks" locally 
+            float2 relativeVelocity = intermediateVelocity - neighbourVelocity;
+            float separationSpeed = dot(relativeVelocity, normalize(r));
+
+            if (separationSpeed < tension_breaking_treshold) {
+              surface_tension_force -= surface_tension_c * cohesionKernel * (r / dist);
+            }
+          }
         }
       }
     }
@@ -513,8 +510,10 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
     N = grad / gradLength;
   float2 f_vorticity = vorticity_epsilon * float2(N.y * omega, -N.x * omega);
 
+  float2 new_pos = resolveCollisions(predPos, ix, true);
   p.position = predPos;
   p.velocity = intermediateVelocity + f_vorticity * dt +
-               viscosity_c * xsphVelocityCorrection;
+               viscosity_c * xsphVelocityCorrection +
+               surface_tension_force * dt;
   Particles[ix] = p;
 }
