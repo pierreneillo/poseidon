@@ -172,6 +172,7 @@ float2 resolveAABBCollision(uint o, float2 currentPos, uint particleDataId,
       resolvedPos.y = minP.y - r;
     else
       resolvedPos.y = maxP.y + r;
+      
 
     if (Hit[particleDataId] < 0)
       Hit[particleDataId] = o;
@@ -260,7 +261,6 @@ float2 resolveCollisions(float2 currentPos, uint particleDataId,
   Particles[ix] = p;
   float2 predPos = p.position + dt * p.velocity;
 
-  bool modified = false;
   float r = smoothingRadius * 0.15f;
 
   float2 rel_predPos = (predPos + sdfSize) / (2 * sdfSize);
@@ -275,14 +275,11 @@ float2 resolveCollisions(float2 currentPos, uint particleDataId,
 
   if (sdfDist < r + epsilon) {
     predPos = predPos + (r - sdfDist) * SdfGradientBuffer[predPos_idx];
-    modified = true;
+    Hit[ix] = ObstacleCount;
   }
 
   // Handling dynamically collisions (player and enemies)
   float2 finalPos = resolveCollisions(predPos, ix, false);
-  if (dot(finalPos - predPos, finalPos - predPos) > 0.0001f) {
-    modified = true;
-  }
   predPos = finalPos;
 
   PredictedPositionsBuffer[ix] = predPos;
@@ -523,17 +520,19 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   float2 new_pos = resolveCollisions(predPos, ix, true);
 
-  if (Hit[ix] > 0) {
-    InterlockedAdd(CollisionFeedbackBuffer[Hit[ix]], 1);
+  if (Hit[ix] >= 0) {
+    if (Hit[ix] < ObstacleCount){
+      InterlockedAdd(CollisionFeedbackBuffer[Hit[ix]], 1);
+    }
     // The particle may die if touching an object, depending on the chances to
-    // die, tied to this object FOR NOW, it is a constant
+    // die, tied to this object. FOR NOW, it is a constant
     if (Random((float)ix + Time * 10000.f) < die_probability) {
       // The particle dies
       Alive[ix] = 0;
     }
   }
 
-  p.position = predPos;
+  p.position = new_pos;
   p.velocity = intermediateVelocity + f_vorticity * dt +
                viscosity_c * xsphVelocityCorrection +
                surface_tension_force * dt;
