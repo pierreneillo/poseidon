@@ -24,6 +24,7 @@ public class Enemy : MonoBehaviour
 
     [SerializeField] private AudioClip[] hitSounds;
     [SerializeField] private AudioClip[] ShoutingSounds;
+    [SerializeField] private AudioClip[] AnecdoteSounds;
     private int randomCaracterSound;
 
 
@@ -55,9 +56,9 @@ public class Enemy : MonoBehaviour
 
     void Update()
     {
-        if(!SoundManager.instance.IsTalking()){
+        if(!SoundManager.instance.IsTalking() && _burning){
             // AudioSource.PlayClipAtPoint(ShoutingSounds[randomCaracterSound],transform.position, 0.3f);
-            SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound],transform, 0.3f);
+            SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound],transform, 0.5f);
         }
 
         if (_burning)
@@ -113,6 +114,12 @@ public class Enemy : MonoBehaviour
                 Destroy(fire);
 
                 _burning = false;
+                SoundManager.instance.KillSound();
+                SoundEnnemiVoiceAnecdote.instance.isSafe = true;
+                SoundEnnemiVoiceAnecdote.instance.sound = AnecdoteSounds[randomCaracterSound];
+
+                // SoundManager.instance.PlaySound(AnecdoteSounds[randomCaracterSound],transform, 0.4f);
+
                 return true;
             }
 

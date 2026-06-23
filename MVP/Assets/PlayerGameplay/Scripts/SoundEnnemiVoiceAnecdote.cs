@@ -1,0 +1,59 @@
+using Unity.VisualScripting;
+using UnityEngine;
+
+public class SoundEnnemiVoiceAnecdote : MonoBehaviour
+{
+    public static SoundEnnemiVoiceAnecdote instance;
+
+    public AudioClip sound;
+    public float delay = 2f;
+
+    private float timer;
+    private bool playerInRange;
+    private bool hasPlayed = false;
+    public bool isSafe = false;
+
+
+    public void Awake(){
+        if (instance == null){
+            instance = this;
+        }
+    }
+
+
+    private void OnTriggerEnter2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Debug.Log("Entered Box");
+            playerInRange = true;
+            timer = 0f;
+        }
+    }
+
+    private void OnTriggerExit2D(Collider2D other)
+    {
+        if (other.CompareTag("Player"))
+        {
+            Debug.Log("Exit Box");
+            playerInRange = false;
+            timer = 0f;
+        }
+    }
+
+    private void Update()
+    {
+        if (isSafe){
+            if (!playerInRange || hasPlayed)
+                return;
+
+            timer += Time.deltaTime;
+
+            if (timer >= delay)
+            {
+                hasPlayed = true;
+                SoundManager.instance.PlaySound(sound,transform, 0.4f);
+            }
+        }
+    }
+}

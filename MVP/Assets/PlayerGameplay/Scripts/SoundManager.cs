@@ -21,6 +21,14 @@ public class SoundManager : MonoBehaviour
         audioSource = Instantiate(soundObject, spawnTransform.position, Quaternion.identity);
         audioSource.clip = audioClip;
         audioSource.volume = volume;
+
+         // Distance Audio Range Settings
+        audioSource.spatialBlend = 1f;
+        audioSource.minDistance = 1f;
+        audioSource.maxDistance = 2f;
+        audioSource.rolloffMode = AudioRolloffMode.Logarithmic;
+
+
         audioSource.Play();
 
         float clipLength = audioSource.clip.length;
