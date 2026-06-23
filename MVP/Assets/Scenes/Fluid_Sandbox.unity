@@ -1574,7 +1574,7 @@ VFXRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1154585220}
   m_Enabled: 1
-  m_CastShadows: 1
+  m_CastShadows: 0
   m_ReceiveShadows: 0
   m_DynamicOccludee: 1
   m_StaticShadowCaster: 0
@@ -1630,7 +1630,7 @@ VisualEffect:
   m_PropertySheet:
     m_Float:
       m_Array:
-      - m_Value: 0.5
+      - m_Value: 2
         m_Name: Size
         m_Overridden: 1
     m_Vector2f:
@@ -1706,11 +1706,10 @@ MonoBehaviour:
   vorticity_epsilon: 0.0001
   viscosity_c: 0.0005
   solverIterations: 4
-  spawnMinPos: {x: -7, y: -2}
-  spawnMaxPos: {x: 7, y: 2}
   rho_0: 400
   surfaceTension_c: 0.05
   tensionBreakingTreshold: 1000
+  die_probability: 1
   sdfSize: {x: 20, y: 20}
   sdfResolution: 1000
 --- !u!1 &1247309894
@@ -1740,7 +1739,7 @@ Transform:
   m_GameObject: {fileID: 1247309894}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
