@@ -1695,14 +1695,14 @@ MonoBehaviour:
   particlesPerFrame: 5
   spawnPoint: {fileID: 910436261}
   spawnRadius: 0.05
-  initialVelocity: 12
+  initialVelocity: 20
   sprayAngle: 0.2
   maxParticleCount: 20000
   gridCellCount: 200000
   maxParticlesPerCell: 64
   cellSize: 0.2
   smoothingRadius: 0.1
-  gravity: {x: 0, y: -9.81}
+  gravity: {x: 0, y: -19.62}
   vorticity_epsilon: 0.0001
   viscosity_c: 0.0005
   solverIterations: 4
