@@ -34,7 +34,7 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private uint maxParticleCount = 2000;
     // Actual number of particles
     private uint particleCount = 0;
-    private uint staticParticleCount = 0;
+    private uint particleIdx = 0;
     [SerializeField] private int gridCellCount = 2048;
     [SerializeField] private int maxParticlesPerCell = 128;
     [SerializeField] private float cellSize = 1.0f;
@@ -279,7 +279,6 @@ public class FluidBridge : MonoBehaviour
         // VFX PARAMS
         vfxGraph.SetUInt("maxParticleCount", maxParticleCount);
         vfxGraph.SetUInt("particleCount", particleCount);
-        vfxGraph.SetUInt("staticParticleCount", staticParticleCount);
         vfxGraph.SetGraphicsBuffer("ParticleBuffer", particleBuffer);
         vfxGraph.SetGraphicsBuffer("AliveBuffer", aliveBuffer);
 
@@ -408,7 +407,7 @@ public class FluidBridge : MonoBehaviour
 
 
         // TODO ? : rename these
-        int threadGroupsParticles = Mathf.CeilToInt((particleCount + staticParticleCount) / 64f);
+        int threadGroupsParticles = Mathf.CeilToInt((particleCount) / 64f);
         int threadGroupsGrid = Mathf.CeilToInt(gridCellCount / 64f);
 
         int maxStepsPerFrame = 2;
@@ -426,6 +425,7 @@ public class FluidBridge : MonoBehaviour
 
             // send constant parameters to the cbuffer
             pbfShader.SetInt("ParticleCount", (int)particleCount);
+            pbfShader.SetInt("ParticleIdx", (int)particleIdx);
             pbfShader.SetFloat("surface_tension_c", surfaceTension_c);
             pbfShader.SetFloat("tension_breaking_treshold", tensionBreakingTreshold);
 
@@ -501,27 +501,48 @@ public class FluidBridge : MonoBehaviour
 
     void ThrowWater(bool isFacingRight)
     {
-        int maxSpawnable = (int)maxParticleCount - (int)staticParticleCount - (int)particleCount;
-        if (maxSpawnable <= 0) return;
-        uint spawned = System.Math.Min((uint)maxSpawnable, particlesPerFrame);
-        FluidParticle[] spawnedWater = new FluidParticle[spawned];
+        // Test if we reached the end of the buffer
+        uint spawnableBeforeLooping = System.Math.Min(maxParticleCount - particleIdx, particlesPerFrame);
+        uint spawnableAfterLooping = particlesPerFrame - spawnableBeforeLooping;
+
+        // Spawn point
         Vector2 baseSpawnPos = spawnPoint.position;
         Vector2 baseSpawnDir = spawnPoint.right;
         if (!isFacingRight)
             baseSpawnDir.x = -baseSpawnDir.x;
-        for (int i = 0; i < spawned; i++)
+
+        // Particle properties
+        FluidParticle[] spawnedWater = new FluidParticle[particlesPerFrame];
+        for (int i = 0; i < particlesPerFrame; i++)
         {
             spawnedWater[i].position = baseSpawnPos + Random.insideUnitCircle * spawnRadius;
             spawnedWater[i].velocity = (baseSpawnDir + Random.insideUnitCircle * sprayAngle) * initialVelocity;
         }
 
-        int[] alive = new int[spawned];
+        int[] alive = new int[particlesPerFrame];
         System.Array.Fill(alive, 1);
-        uint startIndex = staticParticleCount + particleCount;
-        particleBuffer.SetData(spawnedWater, 0, (int)startIndex, (int)spawned);
-        aliveBuffer.SetData(alive, 0, (int)startIndex, (int)spawned);
-        // We should increase the number of particles
-        particleCount += spawned;
+
+        // Spawning particles before looping
+        if(spawnableBeforeLooping > 0)
+        {
+            particleBuffer.SetData(spawnedWater, 0, (int)particleIdx, (int)spawnableBeforeLooping);
+            aliveBuffer.SetData(alive, 0, (int)particleIdx, (int)spawnableBeforeLooping);
+        }
+
+        // Spawn particles after looping
+        if(spawnableAfterLooping > 0)
+        {
+            particleBuffer.SetData(spawnedWater, (int)spawnableAfterLooping, 0, (int)spawnableAfterLooping);
+            aliveBuffer.SetData(alive, (int)spawnableAfterLooping, 0, (int)spawnableAfterLooping);
+        }
+        
+
+        // Increase the number of particles (if needed) and increase the particle idx
+        if (particleCount < maxParticleCount) particleCount += spawnableBeforeLooping;
+        if (spawnableAfterLooping > 0) particleIdx = spawnableAfterLooping;
+        else particleIdx += spawnableBeforeLooping;
+        if (particleIdx == maxParticleCount) particleIdx = 0;
+        
     }
 
     void OnDestroy()

@@ -1697,7 +1697,7 @@ MonoBehaviour:
   spawnRadius: 0.05
   initialVelocity: 12
   sprayAngle: 0.2
-  maxParticleCount: 20000
+  maxParticleCount: 2000
   gridCellCount: 200000
   maxParticlesPerCell: 64
   cellSize: 0.2
