@@ -37,6 +37,12 @@ public class Enemy : MonoBehaviour
 
     public int GPUObstacleID { get; private set; } = -1;
 
+    [Header("Fire Gameplay")]
+    [SerializeField] private float power = 5f;
+    [SerializeField] private GameObject fireParticlePrefab;
+    [SerializeField] private float fireSpawnInterval = 0.2f;
+    private float _fireTimer;
+
     void Start()
     {
         // Movement
@@ -73,9 +79,23 @@ public class Enemy : MonoBehaviour
             }
 
             _rb.linearVelocityX = _facingDirection * speed;
-        }
-        
 
+            _fireTimer += Time.deltaTime;
+            if (_fireTimer >= fireSpawnInterval) {
+                _fireTimer = 0f;
+                SpawnFireParticle();
+            }
+        }
+    }
+
+    void SpawnFireParticle() {
+        Vector2 randomOffset = Random.insideUnitCircle * (power * 0.3f); 
+        Vector3 spawnPos = transform.position + new Vector3(randomOffset.x, randomOffset.y, 0f);
+        
+        if (fireParticlePrefab != null)
+        {
+            Instantiate(fireParticlePrefab, spawnPos, Quaternion.identity);
+        }
     }
 
     bool CheckWall()
