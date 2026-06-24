@@ -1,23 +1,32 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerScript : MonoBehaviour
 {
 	// Public attributes
 	[Header("Movement")]
-	public InputSystem_Actions actions;
-	public float speed;
-	public float jumpStrength;
-	public uint maxJumps;
+	[SerializeField] private InputSystem_Actions actions;
+	[SerializeField] private float speed;
+	[SerializeField] private float jumpStrength;
+	[SerializeField] private uint maxJumps;
 	[Range(0, 1)]
-	public float jumpDamping;
+	[SerializeField] private float jumpDamping;
 
 	[Space(5)]
 	[Header("Animation")]
-	public Animator animator;
-	public PhysicsMaterial2D zeroFrictionWallMaterial;  // To simplify: it can be directly changed in unity ; to make it cleaner, we can change that later
+	[SerializeField] private Animator animator;
+	[SerializeField] private PhysicsMaterial2D zeroFrictionWallMaterial;  // To simplify: it can be directly changed in unity ; to make it cleaner, we can change that later
+
+	[Header("HP")]
+	[SerializeField] private Image hpBar;
+	[SerializeField] private float maxHp = 15f;
+	private Vector2 hpBarSize;
+    private float hp;
+	private Color init_c;
+	private Color end_c = new Color32(25, 25, 112, 255);
 
 	// Private attribute
 	private Rigidbody2D _rb;
@@ -131,7 +140,19 @@ public class PlayerScript : MonoBehaviour
     }
 
 
-
+	public bool damagePlayer(float damages)
+    {
+        // HP management
+        hp -= damages;
+		hp = Mathf.Clamp(hp, 0f, maxHp);
+		float hpRatio = hp / maxHp;
+        // HP bar 
+		if (hpBar != null) {
+        	hpBar.fillAmount = hpRatio;
+        	hpBar.color = Color.Lerp(end_c, init_c, hpRatio);
+		}
+        return false;
+    }
 
     // Start is called once before the first execution of Update after the MonoBehavior is created
     // "The Game starts"
@@ -139,6 +160,9 @@ public class PlayerScript : MonoBehaviour
 	{
 		_rb = GetComponent<Rigidbody2D>();    // Link the Rigidbody2D specified on the editor 
 		_scale = transform.localScale;
+		hp = maxHp;
+        hpBarSize = hpBar.transform.localScale;
+		init_c = hpBar.color;
 	}
 
 	// TO DO UPDATE
