@@ -1697,7 +1697,7 @@ MonoBehaviour:
   spawnRadius: 0.05
   initialVelocity: 20
   sprayAngle: 0.2
-  maxParticleCount: 20000
+  maxParticleCount: 2000
   gridCellCount: 200000
   maxParticlesPerCell: 64
   cellSize: 0.2
@@ -1706,11 +1706,10 @@ MonoBehaviour:
   vorticity_epsilon: 0.0001
   viscosity_c: 0.0005
   solverIterations: 4
-  spawnMinPos: {x: -7, y: -2}
-  spawnMaxPos: {x: 7, y: 2}
   rho_0: 400
   surfaceTension_c: 0.05
   tensionBreakingTreshold: 1000
+  die_probability: 0.05
   sdfSize: {x: 20, y: 20}
   sdfResolution: 1000
 --- !u!1 &1247309894
@@ -1740,7 +1739,7 @@ Transform:
   m_GameObject: {fileID: 1247309894}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalPosition: {x: 0, y: 0, z: 1}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:

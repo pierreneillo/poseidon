@@ -34,7 +34,7 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private uint maxParticleCount = 2000;
     // Actual number of particles
     private uint particleCount = 0;
-    private uint staticParticleCount = 0;
+    private uint particleIdx = 0;
     [SerializeField] private int gridCellCount = 2048;
     [SerializeField] private int maxParticlesPerCell = 128;
     [SerializeField] private float cellSize = 1.0f;
@@ -44,12 +44,11 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private float viscosity_c = 0.01f;
 
     [SerializeField] private uint solverIterations = 3;
-    [SerializeField] private Vector2 spawnMinPos = new Vector2(-5f, 2f);
-    [SerializeField] private Vector2 spawnMaxPos = new Vector2(5f, 7f);
     [SerializeField] private float rho_0 = 1000.0f;
 
     [SerializeField] private float surfaceTension_c = 0.05f;
     [SerializeField] private float tensionBreakingTreshold = 0.75f;
+    [SerializeField] private float die_probability = 0.1f;
 
     // Kernels ID
     private int kernelClear;
@@ -62,14 +61,14 @@ public class FluidBridge : MonoBehaviour
 
     // VRAM
     private GraphicsBuffer particleBuffer;
+    private GraphicsBuffer aliveBuffer;
+    private GraphicsBuffer hitBuffer;
     private GraphicsBuffer predictedPositionsBuffer;
     private GraphicsBuffer lambdaBuffer;
     private GraphicsBuffer vorticityBuffer;
 
     private GraphicsBuffer particlesInCellBuffer;
     private GraphicsBuffer nInCellBuffer;
-
-    private GraphicsBuffer debugColorBuffer;
 
     private float fixedDeltaTime = 0.016f; // 60Hz
     private float accumulator = 0f;
@@ -171,21 +170,14 @@ public class FluidBridge : MonoBehaviour
         kernelUpdateParticles = pbfShader.FindKernel("updateParticles");
 
 
-        // This should be commented soon enough
-        rawParticles = new FluidParticle[particleCount];
-        // Ideally, particles must appear at a distance of 0.5 * smoothingRadius from each other
-        float4[] colors = new float4[particleCount];
-        for (int i = 0; i < particleCount; i++)
-        {
-            rawParticles[i].position = new Vector2(Random.Range(spawnMinPos.x, spawnMaxPos.x), Random.Range(spawnMinPos.y, spawnMaxPos.y)) + (Random.insideUnitCircle * 0.01f);
-            rawParticles[i].velocity = new Vector2(0f, 0f);
-            colors[i] = new float4(0, 0, 1, 1);
-        }
-        // Until here
 
-        int stride = Marshal.SizeOf(typeof(FluidParticle));
-        particleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, stride); // equivalent to glGenBuffers() and glBindBuffer() in OpenGL
-        particleBuffer.SetData(rawParticles); // pushes data to VRAM
+
+        particleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(FluidParticle))); // equivalent to glGenBuffers() and glBindBuffer() in OpenGL
+
+        aliveBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(int)));
+        hitBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(int)));
+
+
 
         predictedPositionsBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(Vector2)));
         lambdaBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(float)));
@@ -196,8 +188,6 @@ public class FluidBridge : MonoBehaviour
 
         nInCellBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, gridCellCount, Marshal.SizeOf(typeof(uint)));
 
-        debugColorBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(float)) * 4);
-        debugColorBuffer.SetData(colors);
 
         int aabbStride = Marshal.SizeOf(typeof(GPUObstacleAABB));
         obstaclesBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, max_obstacles, aabbStride);
@@ -289,9 +279,8 @@ public class FluidBridge : MonoBehaviour
         // VFX PARAMS
         vfxGraph.SetUInt("maxParticleCount", maxParticleCount);
         vfxGraph.SetUInt("particleCount", particleCount);
-        vfxGraph.SetUInt("staticParticleCount", staticParticleCount);
         vfxGraph.SetGraphicsBuffer("ParticleBuffer", particleBuffer);
-        vfxGraph.SetGraphicsBuffer("ColorBuffer", debugColorBuffer);
+        vfxGraph.SetGraphicsBuffer("AliveBuffer", aliveBuffer);
 
 
         // SHADER PARAMS
@@ -307,6 +296,7 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetFloat("vorticity_epsilon", vorticity_epsilon);
         pbfShader.SetFloat("viscosity_c", viscosity_c);
         pbfShader.SetFloat("rho_0", rho_0);
+        pbfShader.SetFloat("die_probability", die_probability);
 
 
 
@@ -314,22 +304,26 @@ public class FluidBridge : MonoBehaviour
 
         pbfShader.SetBuffer(kernelPredict, "Particles", particleBuffer);
         pbfShader.SetBuffer(kernelPredict, "PredictedPositionsBuffer", predictedPositionsBuffer);
-        pbfShader.SetBuffer(kernelPredict, "Colors", debugColorBuffer);
         pbfShader.SetBuffer(kernelPredict, "ObstaclesBuffer", obstaclesBuffer);
         pbfShader.SetBuffer(kernelPredict, "CollisionFeedbackBuffer", collisionFeedbackBuffer);
         pbfShader.SetBuffer(kernelPredict, "SdfValuesBuffer", sdfValuesBuffer);
         pbfShader.SetBuffer(kernelPredict, "SdfGradientBuffer", sdfGradientBuffer);
+        pbfShader.SetBuffer(kernelPredict, "Alive", aliveBuffer);
+        pbfShader.SetBuffer(kernelPredict, "Hit", hitBuffer);
+
 
         pbfShader.SetBuffer(kernelClear, "NInCell", nInCellBuffer);
 
         pbfShader.SetBuffer(kernelBuild, "PredictedPositionsBuffer", predictedPositionsBuffer);
         pbfShader.SetBuffer(kernelBuild, "ParticlesInCell", particlesInCellBuffer);
         pbfShader.SetBuffer(kernelBuild, "NInCell", nInCellBuffer);
+        pbfShader.SetBuffer(kernelBuild, "Alive", aliveBuffer);
 
         pbfShader.SetBuffer(kernelDensity, "PredictedPositionsBuffer", predictedPositionsBuffer);
         pbfShader.SetBuffer(kernelDensity, "ParticlesInCell", particlesInCellBuffer);
         pbfShader.SetBuffer(kernelDensity, "NInCell", nInCellBuffer);
         pbfShader.SetBuffer(kernelDensity, "LambdaBuffer", lambdaBuffer);
+        pbfShader.SetBuffer(kernelDensity, "Alive", aliveBuffer);
 
         pbfShader.SetBuffer(kernelApplyConstraints, "PredictedPositionsBuffer", predictedPositionsBuffer);
         pbfShader.SetBuffer(kernelApplyConstraints, "LambdaBuffer", lambdaBuffer);
@@ -337,12 +331,15 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetBuffer(kernelApplyConstraints, "NInCell", nInCellBuffer);
         pbfShader.SetBuffer(kernelApplyConstraints, "ObstaclesBuffer", obstaclesBuffer);
         pbfShader.SetBuffer(kernelApplyConstraints, "CollisionFeedbackBuffer", collisionFeedbackBuffer);
+        pbfShader.SetBuffer(kernelApplyConstraints, "Alive", aliveBuffer);
+        pbfShader.SetBuffer(kernelApplyConstraints, "Hit", hitBuffer);
 
         pbfShader.SetBuffer(kernelVorticity, "Vorticity", vorticityBuffer);
         pbfShader.SetBuffer(kernelVorticity, "Particles", particleBuffer);
         pbfShader.SetBuffer(kernelVorticity, "PredictedPositionsBuffer", predictedPositionsBuffer);
         pbfShader.SetBuffer(kernelVorticity, "ParticlesInCell", particlesInCellBuffer);
         pbfShader.SetBuffer(kernelVorticity, "NInCell", nInCellBuffer);
+        pbfShader.SetBuffer(kernelVorticity, "Alive", aliveBuffer);
 
         pbfShader.SetBuffer(kernelUpdateParticles, "Vorticity", vorticityBuffer);
         pbfShader.SetBuffer(kernelUpdateParticles, "Particles", particleBuffer);
@@ -351,12 +348,15 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetBuffer(kernelUpdateParticles, "NInCell", nInCellBuffer);
         pbfShader.SetBuffer(kernelUpdateParticles, "ObstaclesBuffer", obstaclesBuffer);
         pbfShader.SetBuffer(kernelUpdateParticles, "CollisionFeedbackBuffer", collisionFeedbackBuffer);
+        pbfShader.SetBuffer(kernelUpdateParticles, "Alive", aliveBuffer);
+        pbfShader.SetBuffer(kernelUpdateParticles, "Hit", hitBuffer);
 
     }
 
     void Update()
     {
         accumulator += Time.deltaTime;
+
 
         System.Array.Clear(obstacleData, 0, obstacleData.Length);
 
@@ -401,12 +401,13 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetFloat("viscosity_c", viscosity_c);
         pbfShader.SetFloat("rho_0", rho_0);
         pbfShader.SetInt("ObstacleCount", currentCount);
+        pbfShader.SetFloat("Time", Time.time);
 
 
 
 
         // TODO ? : rename these
-        int threadGroupsParticles = Mathf.CeilToInt((particleCount + staticParticleCount) / 64f);
+        int threadGroupsParticles = Mathf.CeilToInt((particleCount) / 64f);
         int threadGroupsGrid = Mathf.CeilToInt(gridCellCount / 64f);
 
         int maxStepsPerFrame = 2;
@@ -424,6 +425,7 @@ public class FluidBridge : MonoBehaviour
 
             // send constant parameters to the cbuffer
             pbfShader.SetInt("ParticleCount", (int)particleCount);
+            pbfShader.SetInt("ParticleIdx", (int)particleIdx);
             pbfShader.SetFloat("surface_tension_c", surfaceTension_c);
             pbfShader.SetFloat("tension_breaking_treshold", tensionBreakingTreshold);
 
@@ -499,36 +501,59 @@ public class FluidBridge : MonoBehaviour
 
     void ThrowWater(bool isFacingRight)
     {
-        UnityEngine.Debug.Log("Throwing water");
-        int maxSpawnable = (int)maxParticleCount - (int)staticParticleCount - (int)particleCount;
-        if (maxSpawnable <= 0) return;
-        uint spawned = System.Math.Min((uint)maxSpawnable, particlesPerFrame);
-        FluidParticle[] spawnedWater = new FluidParticle[spawned];
+        // Test if we reached the end of the buffer
+        uint spawnableBeforeLooping = System.Math.Min(maxParticleCount - particleIdx, particlesPerFrame);
+        uint spawnableAfterLooping = particlesPerFrame - spawnableBeforeLooping;
+
+        // Spawn point
         Vector2 baseSpawnPos = spawnPoint.position;
         Vector2 baseSpawnDir = spawnPoint.right;
         if (!isFacingRight)
             baseSpawnDir.x = -baseSpawnDir.x;
-        for (int i = 0; i < spawned; i++)
+
+        // Particle properties
+        FluidParticle[] spawnedWater = new FluidParticle[particlesPerFrame];
+        for (int i = 0; i < particlesPerFrame; i++)
         {
             spawnedWater[i].position = baseSpawnPos + Random.insideUnitCircle * spawnRadius;
             spawnedWater[i].velocity = (baseSpawnDir + Random.insideUnitCircle * sprayAngle) * initialVelocity;
         }
 
-        uint startIndex = staticParticleCount + particleCount;
-        particleBuffer.SetData(spawnedWater, 0, (int)startIndex, (int)spawned);
-        // We should increase the number of particles
-        particleCount += spawned;
+        int[] alive = new int[particlesPerFrame];
+        System.Array.Fill(alive, 1);
+
+        // Spawning particles before looping
+        if(spawnableBeforeLooping > 0)
+        {
+            particleBuffer.SetData(spawnedWater, 0, (int)particleIdx, (int)spawnableBeforeLooping);
+            aliveBuffer.SetData(alive, 0, (int)particleIdx, (int)spawnableBeforeLooping);
+        }
+
+        // Spawn particles after looping
+        if(spawnableAfterLooping > 0)
+        {
+            particleBuffer.SetData(spawnedWater, (int)spawnableAfterLooping, 0, (int)spawnableAfterLooping);
+            aliveBuffer.SetData(alive, (int)spawnableAfterLooping, 0, (int)spawnableAfterLooping);
+        }
+        
+
+        // Increase the number of particles (if needed) and increase the particle idx
+        if (particleCount < maxParticleCount) particleCount += spawnableBeforeLooping;
+        if (spawnableAfterLooping > 0) particleIdx = spawnableAfterLooping;
+        else particleIdx += spawnableBeforeLooping;
+        if (particleIdx == maxParticleCount) particleIdx = 0;
+        
     }
 
     void OnDestroy()
     {
         if (particleBuffer != null) { particleBuffer.Release(); particleBuffer = null; }
+        if (aliveBuffer != null) { aliveBuffer.Release(); aliveBuffer = null; }
         if (predictedPositionsBuffer != null) { predictedPositionsBuffer.Release(); predictedPositionsBuffer = null; }
         if (lambdaBuffer != null) { lambdaBuffer.Release(); lambdaBuffer = null; }
         if (vorticityBuffer != null) { vorticityBuffer.Release(); vorticityBuffer = null; }
         if (particlesInCellBuffer != null) { particlesInCellBuffer.Release(); particlesInCellBuffer = null; }
         if (nInCellBuffer != null) { nInCellBuffer.Release(); nInCellBuffer = null; }
-        if (debugColorBuffer != null) { debugColorBuffer.Release(); debugColorBuffer = null; }
         if (sdfValuesBuffer != null) { sdfValuesBuffer.Release(); sdfValuesBuffer = null; }
         if (sdfGradientBuffer != null) { sdfGradientBuffer.Release(); sdfGradientBuffer = null; }
     }
