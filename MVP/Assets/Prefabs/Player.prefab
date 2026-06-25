@@ -317,6 +317,13 @@ MonoBehaviour:
   maxJumps: 3
   jumpDamping: 0.4
   animator: {fileID: 7781741580018789634}
+  zeroFrictionWallMaterial: {fileID: 0}
+  hpBar: {fileID: 0}
+  maxHp: 150
+  waterCost: 0.05
+  Projectile: {fileID: 0}
+  LaunchOffset: {fileID: 0}
+  smokeParticleSystem: {fileID: 0}
 --- !u!61 &8177213170485575849
 BoxCollider2D:
   m_ObjectHideFlags: 0

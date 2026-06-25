@@ -224,7 +224,7 @@ GameObject:
   - component: {fileID: 3332899294402951976}
   m_Layer: 0
   m_Name: Bush
-  m_TagString: Untagged
+  m_TagString: Ground
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -413,7 +413,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 1be7b9d42b970624b9adcd69f6c36cfb, type: 3}
   m_Name: 
   m_EditorClassIdentifier: '::'
-  maxHp: 15
+  maxHp: 150
+  waterDamage: 0.5
   hpBar: {fileID: 7245082843023561740}
   fire: {fileID: 5964526797203173549}
   min_fire_scale: 0
@@ -423,6 +424,10 @@ MonoBehaviour:
   - {fileID: 8300000, guid: c90ea11cd4c86a249ba80ef57d72f5c5, type: 3}
   - {fileID: 8300000, guid: edae60994af091245b6a071554aeef76, type: 3}
   - {fileID: 8300000, guid: dd4825a414fba264cba9a685a5d1f80e, type: 3}
+  power: 5
+  fireParticlePrefab: {fileID: 0}
+  fireSpawnInterval: 0.2
+  smokeParticleSystem: {fileID: 0}
   wallCheckDistance: 0.8
   groundCheckDistance: 0.1
   groundCheckOffset: {x: 0, y: -0.22}
