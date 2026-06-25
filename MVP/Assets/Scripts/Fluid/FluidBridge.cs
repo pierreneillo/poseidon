@@ -6,6 +6,10 @@ using UnityEngine.Rendering;
 using UnityEngine.VFX;
 using Random = UnityEngine.Random;
 using UnityEngine.InputSystem;
+using System.Numerics;
+using System.Collections.Generic;
+using Vector2 = UnityEngine.Vector2;
+using Unity.VisualScripting;
 
 [System.Serializable] // will be useful for debug
 [StructLayout(LayoutKind.Sequential)]
@@ -31,8 +35,9 @@ public class FluidBridge : MonoBehaviour
 
     [Header("Simulation Settings")]
     // Capacity of buffers
-    [SerializeField] private uint maxParticleCount = 2000;
-    [SerializeField] private uint everlastingParticleCount = 100;
+    [SerializeField] private uint maxTemporaryParticleCount = 2000;
+    private uint maxParticleCount = 0;
+    private static uint everlastingParticleCount = 0;
     // Actual number of particles
     private uint particleCount;
     private uint particleIdx;
@@ -48,7 +53,7 @@ public class FluidBridge : MonoBehaviour
     [SerializeField] private float rho_0 = 1000.0f;
 
     [SerializeField] private float surfaceTension_c = 0.05f;
-    [SerializeField] private float tensionBreakingTreshold = 0.75f;
+    [SerializeField] private float tensionBreakingThreshold = 0.75f;
     [SerializeField] private float particleTimeout = 10f;
 
     // Kernels ID
@@ -90,6 +95,10 @@ public class FluidBridge : MonoBehaviour
     private static Enemy[] activeObstacles = new Enemy[max_obstacles];
     private static int currentCount = 1;
 
+    [Header("Water sources")]
+    private static List<WaterSource> waterSources = new List<WaterSource>();
+
+
     [Header("Static walls & Signed Distance Field")]
     [SerializeField] private Vector2 sdfSize = new Vector2(20f, 20f);
     [SerializeField] private int sdfResolution = 1;
@@ -113,6 +122,14 @@ public class FluidBridge : MonoBehaviour
             }
         }
         return -1;
+    }
+
+    public static int RegisterWaterSource(WaterSource waterSource)
+    {
+        int idx = waterSources.Count;
+        waterSources.Add(waterSource);
+        everlastingParticleCount += waterSource.getNbOfParticles();
+        return idx;
     }
 
     public static void UnregisterObstacle(int id)
@@ -151,6 +168,28 @@ public class FluidBridge : MonoBehaviour
     }
 
 
+    private void CreateEverlastingParticles()
+    {
+        // Create everlasting particles
+        everlastingParticleCount = 0;
+        foreach (WaterSource waterSource in waterSources)
+        {
+            uint currentParticleCount = waterSource.getNbOfParticles();
+            FluidParticle[] everlastingWater = new FluidParticle[currentParticleCount];
+            for (int i = 0; i < currentParticleCount; i++)
+            {
+                everlastingWater[i].position = new Vector2(waterSource.transform.position.x, waterSource.transform.position.y) + waterSource.getSpawnRadius() * Random.insideUnitCircle;
+                everlastingWater[i].velocity = Random.insideUnitCircle;
+            }
+
+            particleBuffer.SetData(everlastingWater, 0, (int)everlastingParticleCount, (int)currentParticleCount);
+
+            everlastingParticleCount += currentParticleCount;
+        }
+        particleCount = everlastingParticleCount;
+        particleIdx = everlastingParticleCount;
+    }
+
 
     void Start()
     {
@@ -169,6 +208,10 @@ public class FluidBridge : MonoBehaviour
         kernelUpdateParticles = pbfShader.FindKernel("updateParticles");
 
 
+        // Get max number of particles
+        everlastingParticleCount = 0;
+        foreach (WaterSource waterSource in waterSources) everlastingParticleCount += waterSource.getNbOfParticles();
+        maxParticleCount = maxTemporaryParticleCount + everlastingParticleCount;
 
 
         particleBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, (int)maxParticleCount, Marshal.SizeOf(typeof(FluidParticle))); // equivalent to glGenBuffers() and glBindBuffer() in OpenGL
@@ -273,20 +316,8 @@ public class FluidBridge : MonoBehaviour
         sdfGradientBuffer = new GraphicsBuffer(GraphicsBuffer.Target.Structured, sdfResolution * sdfResolution, Marshal.SizeOf(typeof(Vector2)));
         sdfGradientBuffer.SetData(sdfGradientValues);
 
+        CreateEverlastingParticles();
 
-        // Create everlasting particles
-        particleCount = everlastingParticleCount;
-        particleIdx = everlastingParticleCount;
-        FluidParticle[] everlastingWater = new FluidParticle[everlastingParticleCount];
-        for (int i = 0; i < everlastingParticleCount; i++)
-        {
-            everlastingWater[i].position = Random.insideUnitCircle;
-            everlastingWater[i].velocity = Random.insideUnitCircle;
-        }
-        float[] CreationTimeBuffer = new float[everlastingParticleCount];
-        System.Array.Fill(CreationTimeBuffer, Time.time);
-        particleBuffer.SetData(everlastingWater, 0, 0, (int)everlastingParticleCount);
-     
 
         // VFX PARAMS
         vfxGraph.SetUInt("maxParticleCount", maxParticleCount);
@@ -438,7 +469,7 @@ public class FluidBridge : MonoBehaviour
             pbfShader.SetInt("ParticleCount", (int)particleCount);
             pbfShader.SetInt("ParticleIdx", (int)particleIdx);
             pbfShader.SetFloat("surface_tension_c", surfaceTension_c);
-            pbfShader.SetFloat("tension_breaking_treshold", tensionBreakingTreshold);
+            pbfShader.SetFloat("tension_breaking_treshold", tensionBreakingThreshold);
 
             timer.Restart();
 
