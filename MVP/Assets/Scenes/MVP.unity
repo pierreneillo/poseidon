@@ -1902,7 +1902,8 @@ MonoBehaviour:
   spawnRadius: 0.05
   initialVelocity: 20
   sprayAngle: 0.2
-  maxParticleCount: 2000
+  maxParticleCount: 20000
+  everlastingParticleCount: 100
   gridCellCount: 200000
   maxParticlesPerCell: 64
   cellSize: 0.2
@@ -1914,7 +1915,7 @@ MonoBehaviour:
   rho_0: 400
   surfaceTension_c: 0.05
   tensionBreakingTreshold: 1000
-  die_probability: 0.05
+  particleTimeout: 10
   sdfSize: {x: 20, y: 20}
   sdfResolution: 1000
 --- !u!1 &1247309894

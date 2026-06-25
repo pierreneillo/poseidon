@@ -23,7 +23,7 @@ struct GPUObstacleAABB {
 
 // Storing Particle positions and velocity
 RWStructuredBuffer<Particle> Particles;
-RWStructuredBuffer<int> Alive;
+RWStructuredBuffer<float> CreationTimeBuffer;
 RWStructuredBuffer<int> Hit;
 
 // Grid cell for neighbour search
@@ -46,6 +46,7 @@ RWStructuredBuffer<uint> CollisionFeedbackBuffer;
 // PBF simulation parameters, coming from the C#
 cbuffer SimulationSettings {
   uint ParticleCount;
+  uint EverlastingParticleCount;
   uint GridCellCount;
   uint MaxParticlesPerCell;
   float cellSize;
@@ -61,7 +62,7 @@ cbuffer SimulationSettings {
   float2 sdfSize;
   float surface_tension_c;
   float tension_breaking_treshold;
-  float die_probability;
+  float particleTimeout;
 };
 
 float Time;
@@ -202,7 +203,7 @@ float2 resolveCollisions(float2 currentPos, uint particleDataId,
 
 [numthreads(64, 1, 1)] void buildNeighbourGrid(uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
-  if (ix < ParticleCount && Alive[ix] != 0) {
+  if (ix < ParticleCount && CreationTimeBuffer[ix] >= 0) {
     float2 predPos = PredictedPositionsBuffer[ix];
     // We hash
     uint h = teschnerHash(int2(floor(predPos / cellSize)));
@@ -250,10 +251,10 @@ float2 resolveCollisions(float2 currentPos, uint particleDataId,
 
     [numthreads(64, 1, 1)] void predictPositions(
         uint3 id : SV_DispatchThreadID) {
-  uint ix = id.x;
-  if (ix >= ParticleCount || Alive[ix] == 0)
+  uint ix = id.x; 
+  if (ix >= ParticleCount || CreationTimeBuffer[ix] < 0)
     return;
-  Particle p = Particles[ix];
+  Particle p = Particles[ix];  
   Hit[ix] = -1;
 
   float2 externalForces = gravity;
@@ -275,7 +276,6 @@ float2 resolveCollisions(float2 currentPos, uint particleDataId,
 
   if (sdfDist < r + epsilon) {
     predPos = predPos + (r - sdfDist) * SdfGradientBuffer[predPos_idx];
-    Hit[ix] = ObstacleCount;
   }
 
   // Handling dynamically collisions (player and enemies)
@@ -288,7 +288,7 @@ float2 resolveCollisions(float2 currentPos, uint particleDataId,
 [numthreads(64, 1, 1)] void
 calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
-  if (ix >= ParticleCount || Alive[ix] == 0)
+  if (ix >= ParticleCount || CreationTimeBuffer[ix] < 0)
     return;
   float2 myPos = PredictedPositionsBuffer[ix];
   float epsilon = 0.01f;
@@ -352,7 +352,7 @@ calculateDensityAndLambda(uint3 id : SV_DispatchThreadID) {
 [numthreads(64, 1, 1)] void
 applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
-  if (ix >= ParticleCount || Alive[ix] == 0)
+  if (ix >= ParticleCount || CreationTimeBuffer[ix] < 0)
     return;
 
   float2 myPos = PredictedPositionsBuffer[ix];
@@ -414,7 +414,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
 [numthreads(64, 1, 1)] void calculateVorticity(uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
-  if (ix >= ParticleCount || Alive[ix] == 0)
+  if (ix >= ParticleCount || CreationTimeBuffer[ix] < 0)
     return;
 
   Particle p = Particles[ix];
@@ -454,7 +454,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
 [numthreads(64, 1, 1)] void updateParticles(uint3 id : SV_DispatchThreadID) {
   uint ix = id.x;
-  if (ix >= ParticleCount || Alive[ix] == 0)
+  if (ix >= ParticleCount || CreationTimeBuffer[ix] < 0)
     return;
 
   float2 predPos = PredictedPositionsBuffer[ix];
@@ -520,15 +520,25 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   float2 new_pos = resolveCollisions(predPos, ix, true);
 
+  // If the particle is not an everlasting particle
+  // Kill the particle after Timeout
+  if (ix >= EverlastingParticleCount && (Time - CreationTimeBuffer[ix]) > particleTimeout)
+  {
+        CreationTimeBuffer[ix] = -1;
+  }
+    
+    
+    
   if (Hit[ix] > 0) {
-    if (Hit[ix] < ObstacleCount){
+    if (Hit[ix] < (int)ObstacleCount){
       InterlockedAdd(CollisionFeedbackBuffer[Hit[ix]], 1);
-    }
+    }     
+    // If the particle is note everlasting    
     // The particle may die if touching an object, depending on the chances to
     // die, tied to this object. FOR NOW, it is a constant
-    if (Random((float)ix + Time * 10000.f) < die_probability) {
+    if (ix >= EverlastingParticleCount /*&& Random((float)ix + Time * 10000.f) < die_probability*/) {
       // The particle dies
-      Alive[ix] = 0;
+      CreationTimeBuffer[ix] = -1;
     }
   }
 
