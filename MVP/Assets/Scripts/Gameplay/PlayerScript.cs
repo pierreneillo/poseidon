@@ -40,6 +40,14 @@ public class PlayerScript : MonoBehaviour
 	public ProjectileBehaviour Projectile;
 	public Transform LaunchOffset;
 
+	[Header("VFX Feedback")]
+	[SerializeField] private ParticleSystem smokeParticleSystem;
+	private float _burnIntensity;
+
+	public void RegisterBurnIntensity(float intensity) {
+		_burnIntensity = Mathf.Max(_burnIntensity, intensity);
+	}
+
 
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
 
@@ -163,6 +171,10 @@ public class PlayerScript : MonoBehaviour
 		hp = maxHp;
         hpBarSize = hpBar.transform.localScale;
 		init_c = hpBar.color;
+		if (smokeParticleSystem != null) {
+        	var emission = smokeParticleSystem.emission;
+        	emission.rateOverTime = 0f;
+    	}
 	}
 
 	// TO DO UPDATE
@@ -175,6 +187,12 @@ public class PlayerScript : MonoBehaviour
 
 		// So we can later stick on the walls by changing the material or the material's friction
 		_rb.sharedMaterial = zeroFrictionWallMaterial;
+
+		if (smokeParticleSystem != null) {
+			var emission = smokeParticleSystem.emission;
+			emission.rateOverTime = _burnIntensity * 40f;
+		}
+		_burnIntensity = 0f;
 
 	}
 

@@ -43,6 +43,9 @@ public class Enemy : MonoBehaviour
     [SerializeField] private float fireSpawnInterval = 0.2f;
     private float _fireTimer;
 
+    [Header("VFX Feedback")]
+	[SerializeField] private ParticleSystem smokeParticleSystem;
+
     void Start()
     {
         // Movement
@@ -58,6 +61,11 @@ public class Enemy : MonoBehaviour
 
         // Sound design 
         randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
+        
+        if (smokeParticleSystem != null) {
+        	var emission = smokeParticleSystem.emission;
+        	emission.rateOverTime = 0f;
+    	}
     }
 
     void Update()
@@ -88,10 +96,22 @@ public class Enemy : MonoBehaviour
         }
     }
 
+    public void GenerateSteam(uint particleHitCount) {
+        if (smokeParticleSystem == null || !_burning) return;
+        var emission = smokeParticleSystem.emission;
+
+        if (particleHitCount > 0) {
+            float emissionRate = Mathf.Min(particleHitCount * 5f, 50f);
+            emission.rateOverTime = emissionRate;
+        } else {
+            emission.rateOverTime = 0f;
+        }
+    }
+
     void SpawnFireParticle() {
         Vector2 randomOffset = Random.insideUnitCircle * (power * 0.3f); 
         Vector3 spawnPos = transform.position + new Vector3(randomOffset.x, randomOffset.y, 0f);
-        
+
         if (fireParticlePrefab != null)
         {
             Instantiate(fireParticlePrefab, spawnPos, Quaternion.identity);

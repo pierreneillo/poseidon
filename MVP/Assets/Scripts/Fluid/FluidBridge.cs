@@ -479,15 +479,18 @@ public class FluidBridge : MonoBehaviour
 
                 var nativeArray = request.GetData<uint>();
 
-                // TODO: change what happens when enemies get hit
                 for (int i = 1; i < max_obstacles; i++)
                 {
-                    if (nativeArray[i] > 5 && activeObstacles[i] != null)
-                    {
-                        // Damage enemy
-                        if (activeObstacles[i].InflictDamage(1f))
+                    if (activeObstacles[i] != null) {
+                        uint hits = nativeArray[i];
+                        activeObstacles[i].GenerateSteam(hits);
+                        if (hits > 5)
                         {
-                            activeObstacles[i] = null;
+                            // Damage enemy
+                            if (activeObstacles[i].InflictDamage(1f))
+                            {
+                                activeObstacles[i] = null;
+                            }
                         }
                     }
                 }

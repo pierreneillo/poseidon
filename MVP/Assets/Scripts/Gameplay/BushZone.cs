@@ -1,12 +1,12 @@
 using UnityEngine;
 
-public class BushZone : MonoBehavior {
+public class BushZone : MonoBehaviour {
     [SerializeField] private float maxDamagePerSecond = 5f;
     [SerializeField] private float sigma = 3f;
     [SerializeField] private float radius = 5f;
 
     void Update() {
-        PlayerScript player = Object.FindFirstObjectByType<PLayerScript>();
+        PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
         if (player == null) return;
 
         float distance = Vector2.Distance(transform.position, player.transform.position);
