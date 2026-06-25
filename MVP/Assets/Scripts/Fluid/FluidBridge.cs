@@ -487,6 +487,7 @@ public class FluidBridge : MonoBehaviour
                         if (hits > 5)
                         {
                             // Damage enemy
+                            UnityEngine.Debug.Log($"Enenmy {i} touched");
                             if (activeObstacles[i].InflictDamage(1f))
                             {
                                 activeObstacles[i] = null;
@@ -526,26 +527,26 @@ public class FluidBridge : MonoBehaviour
         System.Array.Fill(alive, 1);
 
         // Spawning particles before looping
-        if(spawnableBeforeLooping > 0)
+        if (spawnableBeforeLooping > 0)
         {
             particleBuffer.SetData(spawnedWater, 0, (int)particleIdx, (int)spawnableBeforeLooping);
             aliveBuffer.SetData(alive, 0, (int)particleIdx, (int)spawnableBeforeLooping);
         }
 
         // Spawn particles after looping
-        if(spawnableAfterLooping > 0)
+        if (spawnableAfterLooping > 0)
         {
             particleBuffer.SetData(spawnedWater, (int)spawnableAfterLooping, 0, (int)spawnableAfterLooping);
             aliveBuffer.SetData(alive, (int)spawnableAfterLooping, 0, (int)spawnableAfterLooping);
         }
-        
+
 
         // Increase the number of particles (if needed) and increase the particle idx
         if (particleCount < maxParticleCount) particleCount += spawnableBeforeLooping;
         if (spawnableAfterLooping > 0) particleIdx = spawnableAfterLooping;
         else particleIdx += spawnableBeforeLooping;
         if (particleIdx == maxParticleCount) particleIdx = 0;
-        
+
     }
 
     void OnDestroy()

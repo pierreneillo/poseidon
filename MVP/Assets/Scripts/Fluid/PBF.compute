@@ -520,7 +520,7 @@ applyDensityConstraints(uint3 id : SV_DispatchThreadID) {
 
   float2 new_pos = resolveCollisions(predPos, ix, true);
 
-  if (Hit[ix] >= 0) {
+  if (Hit[ix] > 0) {
     if (Hit[ix] < ObstacleCount){
       InterlockedAdd(CollisionFeedbackBuffer[Hit[ix]], 1);
     }

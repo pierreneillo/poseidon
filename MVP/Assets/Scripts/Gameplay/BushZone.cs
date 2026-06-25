@@ -6,8 +6,18 @@ public class BushZone : MonoBehaviour
     [SerializeField] private float sigma = 3f;
     [SerializeField] private float radius = 5f;
 
+    private Enemy _associatedEnemy;
+
+    void Start()
+    {
+        _associatedEnemy = GetComponentInParent<Enemy>();
+    }
+
     void Update()
     {
+        if (_associatedEnemy != null && _associatedEnemy.InflictDamage(0) == true) {
+            return;
+        }
         PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
         if (player == null) return;
 
