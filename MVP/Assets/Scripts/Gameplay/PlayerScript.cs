@@ -1,23 +1,32 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
 using System;
+using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
 public class PlayerScript : MonoBehaviour
 {
 	// Public attributes
 	[Header("Movement")]
-	public InputSystem_Actions actions;
-	public float speed;
-	public float jumpStrength;
-	public uint maxJumps;
+	[SerializeField] private InputSystem_Actions actions;
+	[SerializeField] private float speed;
+	[SerializeField] private float jumpStrength;
+	[SerializeField] private uint maxJumps;
 	[Range(0, 1)]
-	public float jumpDamping;
+	[SerializeField] private float jumpDamping;
 
 	[Space(5)]
 	[Header("Animation")]
-	public Animator animator;
-	public PhysicsMaterial2D zeroFrictionWallMaterial;  // To simplify: it can be directly changed in unity ; to make it cleaner, we can change that later
+	[SerializeField] private Animator animator;
+	[SerializeField] private PhysicsMaterial2D zeroFrictionWallMaterial;  // To simplify: it can be directly changed in unity ; to make it cleaner, we can change that later
+
+	[Header("HP")]
+	[SerializeField] private Image hpBar;
+	[SerializeField] private float maxHp = 15f;
+	private Vector2 hpBarSize;
+	private float hp;
+	private Color init_c;
+	private Color end_c = new Color32(25, 25, 112, 255);
 
 	// Private attribute
 	private Rigidbody2D _rb;
@@ -30,6 +39,15 @@ public class PlayerScript : MonoBehaviour
 	// Projectile
 	public ProjectileBehaviour Projectile;
 	public Transform LaunchOffset;
+
+	[Header("VFX Feedback")]
+	[SerializeField] private ParticleSystem smokeParticleSystem;
+	private float _burnIntensity;
+
+	public void RegisterBurnIntensity(float intensity)
+	{
+		_burnIntensity = Mathf.Max(_burnIntensity, intensity);
+	}
 
 
 	/* General pipeline : Awake -> OnEnable -> Start -> Update/FixedUpdate -> OnDisable -> OnDestroy  */
@@ -49,7 +67,7 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Attack.performed += TriggerProjectile;
 		actions.Player.ThrowWater.performed += OnThrowWaterInput;
 
-        actions.Player.Move.canceled += Movement;
+		actions.Player.Move.canceled += Movement;
 		actions.Player.Jump.canceled += Jumping;
 		actions.Player.Attack.canceled += TriggerProjectile;
 		actions.Player.ThrowWater.canceled += OnThrowWaterInput;
@@ -63,9 +81,9 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Jump.performed -= Jumping;
 		actions.Player.Attack.performed -= TriggerProjectile;
 
-        actions.Player.ThrowWater.performed -= OnThrowWaterInput;
-        actions.Player.ThrowWater.canceled -= OnThrowWaterInput;
-    }
+		actions.Player.ThrowWater.performed -= OnThrowWaterInput;
+		actions.Player.ThrowWater.canceled -= OnThrowWaterInput;
+	}
 
 
 
@@ -124,21 +142,43 @@ public class PlayerScript : MonoBehaviour
 
 
 
-    private void OnThrowWaterInput(InputAction.CallbackContext context)
-    {
-        if (context.performed) animator.SetBool("isThrowing", true);
-        if (context.canceled) animator.SetBool("isThrowing", false);
-    }
+	private void OnThrowWaterInput(InputAction.CallbackContext context)
+	{
+		if (context.performed) animator.SetBool("isThrowing", true);
+		if (context.canceled) animator.SetBool("isThrowing", false);
+	}
 
 
+	public bool damagePlayer(float damages)
+	{
+		// HP management
+		hp -= damages;
+		UnityEngine.Debug.Log($"{damages} damages done, {hp} PV remaining");
+		hp = Mathf.Clamp(hp, 0f, maxHp);
+		float hpRatio = hp / maxHp;
+		// HP bar 
+		if (hpBar != null)
+		{
+			hpBar.fillAmount = hpRatio;
+			hpBar.color = Color.Lerp(end_c, init_c, hpRatio);
+		}
+		return false;
+	}
 
-
-    // Start is called once before the first execution of Update after the MonoBehavior is created
-    // "The Game starts"
-    void Start()
+	// Start is called once before the first execution of Update after the MonoBehavior is created
+	// "The Game starts"
+	void Start()
 	{
 		_rb = GetComponent<Rigidbody2D>();    // Link the Rigidbody2D specified on the editor 
 		_scale = transform.localScale;
+		hp = maxHp;
+		hpBarSize = hpBar.transform.localScale;
+		init_c = hpBar.color;
+		if (smokeParticleSystem != null)
+		{
+			var emission = smokeParticleSystem.emission;
+			emission.rateOverTime = 0f;
+		}
 	}
 
 	// TO DO UPDATE
@@ -151,6 +191,13 @@ public class PlayerScript : MonoBehaviour
 
 		// So we can later stick on the walls by changing the material or the material's friction
 		_rb.sharedMaterial = zeroFrictionWallMaterial;
+
+		if (smokeParticleSystem != null)
+		{
+			var emission = smokeParticleSystem.emission;
+			emission.rateOverTime = _burnIntensity * 40f;
+		}
+		_burnIntensity = 0f;
 
 	}
 
