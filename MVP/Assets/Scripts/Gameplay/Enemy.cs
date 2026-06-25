@@ -3,6 +3,8 @@ using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
+  public bool wantSpeaches = false; 
+
   // Public attributes
   [Header("Stats")]
   [SerializeField] protected float maxHp = 15f;
@@ -16,6 +18,10 @@ public class Enemy : MonoBehaviour
   [SerializeField] protected float min_fire_scale = 0f;
 
   [SerializeField] protected AudioClip[] hitSounds;
+  [SerializeField] protected AudioClip[] fireDesappering;
+  [SerializeField] private AudioClip[] ShoutingSounds;
+  [SerializeField] private AudioClip[] AnecdoteSounds;
+  private int randomCaracterSound;
 
   [Header("Fire Gameplay")]
   [SerializeField] protected float power = 5f;
@@ -49,6 +55,9 @@ public class Enemy : MonoBehaviour
         var emission = smokeParticleSystem.emission;
         emission.rateOverTime = 0f;
     }
+    
+    // Sound design 
+    randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
   }
 
   protected virtual void Update()
@@ -61,6 +70,13 @@ public class Enemy : MonoBehaviour
           _fireTimer = 0f;
           SpawnFireParticle();
       }
+      
+
+      // Sound
+      if(!SoundManager.instance.IsTalking() && _burning && wantSpeaches){
+          SoundManager.instance.PlayVoice(ShoutingSounds[randomCaracterSound],transform, 0.5f);
+      }
+      
     }
   }
 
@@ -99,6 +115,16 @@ public class Enemy : MonoBehaviour
       // HP management
       hp -= damages;
 
+
+      if (damages > 0){
+        // Play sound
+        int rand = Random.Range(0, hitSounds.Length);
+        AudioSource.PlayClipAtPoint(hitSounds[rand], transform.position, 0.5f);
+        rand = Random.Range(0, fireDesappering.Length);
+        SoundManager.instance.PlayFireSound(fireDesappering[rand], transform, 0.3f);
+        // AudioSource.PlayClipAtPoint(fireDesappering[rand], transform.position, 0.3f);
+      }
+
       if (hp <= 0)
       {
         Debug.Log("Enemy dead");
@@ -109,7 +135,15 @@ public class Enemy : MonoBehaviour
         if (fire != null) Destroy(fire.gameObject);
 
         _burning = false;
-        if (SoundManager.instance != null) SoundManager.instance.KillSound();
+
+        // Sound Design
+        if (SoundManager.instance != null) SoundManager.instance.KillSounds();
+        
+        if (wantSpeaches){
+          SoundEnnemiVoiceAnecdote.instance.wantVoice = true;
+          SoundEnnemiVoiceAnecdote.instance.isSafe = true;
+          SoundEnnemiVoiceAnecdote.instance.sound = AnecdoteSounds[randomCaracterSound];
+        }
 
         return true;
       }
@@ -128,12 +162,12 @@ public class Enemy : MonoBehaviour
       return false;
     }
 
-    return false;
+    return true;
   }
 
   protected virtual void OnDestroy()
   {
     if (SoundManager.instance != null)
-      SoundManager.instance.KillSound();
+      SoundManager.instance.KillSounds();
   }
 }

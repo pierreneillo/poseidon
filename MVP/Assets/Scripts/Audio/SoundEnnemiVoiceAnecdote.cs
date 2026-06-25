@@ -13,6 +13,8 @@ public class SoundEnnemiVoiceAnecdote : MonoBehaviour
     private bool hasPlayed = false;
     public bool isSafe = false;
 
+    public bool wantVoice = false;
+
 
     public void Awake(){
         if (instance == null){
@@ -52,7 +54,7 @@ public class SoundEnnemiVoiceAnecdote : MonoBehaviour
             if (timer >= delay)
             {
                 hasPlayed = true;
-                SoundManager.instance.PlaySound(sound,transform, 0.4f);
+                SoundManager.instance.PlayVoice(sound,transform, 0.4f);
             }
         }
     }
