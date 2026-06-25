@@ -598,7 +598,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_Sprite: {fileID: 10907, guid: 0000000000000000f000000000000000, type: 0}
+  m_Sprite: {fileID: 7482667652216324306, guid: 311925a002f4447b3a28927169b83ea6, type: 3}
   m_Type: 3
   m_PreserveAspect: 0
   m_FillCenter: 1
@@ -5842,6 +5842,7 @@ GameObject:
   - component: {fileID: 691619585}
   - component: {fileID: 691619587}
   - component: {fileID: 691619586}
+  - component: {fileID: 691619588}
   m_Layer: 0
   m_Name: TriggerZone
   m_TagString: Untagged
@@ -5925,6 +5926,21 @@ BoxCollider2D:
   m_AutoTiling: 0
   m_Size: {x: 8, y: 8}
   m_EdgeRadius: 0
+--- !u!114 &691619588
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 691619584}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dbc9b717fe607f5918c99088acde5f2a, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Assembly-CSharp::BushZone
+  maxDamagePerSecond: 5
+  sigma: 3
+  radius: 5
 --- !u!1 &784338659
 GameObject:
   m_ObjectHideFlags: 0

@@ -153,7 +153,7 @@ public class PlayerScript : MonoBehaviour
 	{
 		// HP management
 		hp -= damages;
-		System.Debug.Log($"{damages} damages done, {hp} PV remaining");
+		UnityEngine.Debug.Log($"{damages} damages done, {hp} PV remaining");
 		hp = Mathf.Clamp(hp, 0f, maxHp);
 		float hpRatio = hp / maxHp;
 		// HP bar 

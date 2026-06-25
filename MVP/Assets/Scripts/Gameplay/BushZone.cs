@@ -12,7 +12,7 @@ public class BushZone : MonoBehaviour
         if (player == null) return;
 
         float distance = Vector2.Distance(transform.position, player.transform.position);
-        System.Debug.Log($"Distance to player : {distance}");
+        UnityEngine.Debug.Log($"Distance to player : {distance}");
         if (distance <= radius)
         {
             float r2 = distance * distance;
