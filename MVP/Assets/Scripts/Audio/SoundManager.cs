@@ -24,7 +24,7 @@ public class SoundManager : MonoBehaviour
             Debug.LogError("Warning: Background Clip missing!");
             return;
         }
-        PlayBackground(backgroundClip, 10f);
+        PlayBackground(backgroundClip, 0.1f);
     }
 
     public void PlayBackground(AudioClip audioClip, float volume)
@@ -35,8 +35,12 @@ public class SoundManager : MonoBehaviour
 
     public void PlayVoice(AudioClip audioClip, Transform spawnTransform, float volume)
     {
-        // On autorise les voix multiples, on ne détruit plus rien ici !
         CreateAudioSource("VoiceSound", audioClip, spawnTransform, volume);
+    }
+
+    public void PlayBurningSound(AudioClip audioClip, Transform spawnTransform, float volume)
+    {
+        CreateAudioSource("BurningSound", audioClip, spawnTransform, volume);
     }
 
     public void PlayFireSound(AudioClip audioClip, Transform spawnTransform, float volume)
@@ -56,11 +60,11 @@ public class SoundManager : MonoBehaviour
         audioSource.clip = audioClip;
         audioSource.volume = volume;
 
-        // Paramètres Audio 3D corrigés
+        // Distance Audio Range Settings
         audioSource.spatialBlend = 1f;
         audioSource.minDistance = 1f;
-        audioSource.maxDistance = 15f; // Modifié pour être audible de plus loin
-        audioSource.rolloffMode = AudioRolloffMode.Linear; // Linear est plus naturel en 2D
+        audioSource.maxDistance = 20f;
+        audioSource.rolloffMode = AudioRolloffMode.Linear; 
 
         audioSource.Play();
 
@@ -76,7 +80,7 @@ public class SoundManager : MonoBehaviour
         AudioSource audioSource = go.AddComponent<AudioSource>();
         audioSource.clip = audioClip;
         audioSource.volume = volume;
-        audioSource.spatialBlend = 0f; // 2D (dans tout le casque)
+        audioSource.spatialBlend = 0f; // Uniform sound in headset
         audioSource.loop = true;
         audioSource.Play();
 

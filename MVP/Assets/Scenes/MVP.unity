@@ -822,7 +822,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
       propertyPath: wantSpeaches
-      value: 1
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
       propertyPath: backgroundSound
@@ -836,6 +836,14 @@ PrefabInstance:
       propertyPath: smokeParticleSystem
       value: 
       objectReference: {fileID: 1438617326}
+    - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
+      propertyPath: fireSound.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
+      propertyPath: 'fireSound.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: b6e2b7e0c7dcb5141a280dd4a2681020, type: 3}
     - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
       propertyPath: AnecdoteSounds.Array.size
       value: 20
@@ -2965,9 +2973,17 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 726291123}
     - target: {fileID: 6160165649684179551, guid: bf4d05296aa2265a3a2105cdc20b9c09, type: 3}
+      propertyPath: fireSound.Array.size
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 6160165649684179551, guid: bf4d05296aa2265a3a2105cdc20b9c09, type: 3}
       propertyPath: hitSounds.Array.size
       value: 1
       objectReference: {fileID: 0}
+    - target: {fileID: 6160165649684179551, guid: bf4d05296aa2265a3a2105cdc20b9c09, type: 3}
+      propertyPath: 'fireSound.Array.data[0]'
+      value: 
+      objectReference: {fileID: 8300000, guid: b6e2b7e0c7dcb5141a280dd4a2681020, type: 3}
     - target: {fileID: 6160165649684179551, guid: bf4d05296aa2265a3a2105cdc20b9c09, type: 3}
       propertyPath: 'hitSounds.Array.data[0]'
       value: 

@@ -19,6 +19,7 @@ public class Enemy : MonoBehaviour
 
   [SerializeField] protected AudioClip[] hitSounds;
   [SerializeField] protected AudioClip[] fireDesappering;
+  [SerializeField] protected AudioClip[] fireSound;
   [SerializeField] private AudioClip[] ShoutingSounds;
   [SerializeField] private AudioClip[] AnecdoteSounds;
   private int randomCaracterSound;
@@ -35,6 +36,7 @@ public class Enemy : MonoBehaviour
   [Header("Audio Cooldown")]
   [SerializeField] protected float shoutCooldown = 1f; 
   protected float _nextShoutTime = 0f;
+  protected float _nextBurningTime = 0f;
 
   // protected attributes
   protected Rigidbody2D _rb;
@@ -77,12 +79,21 @@ public class Enemy : MonoBehaviour
       }
       
 
-      // Sound
-      if(Time.time >= _nextShoutTime && _burning && wantSpeaches){
+    // Sounds
+      // Shout
+      if(Time.time >= _nextShoutTime && wantSpeaches){
         AudioClip clipToPlay = ShoutingSounds[randomCaracterSound];
         SoundManager.instance.PlayVoice(clipToPlay,transform, 0.5f);
         _nextShoutTime = Time.time + clipToPlay.length + shoutCooldown;
       }
+      // Burning
+      if(Time.time >= _nextBurningTime){
+        int randomFireSound = Random.Range(0, fireSound.Length);
+        AudioClip clipToPlay = fireSound[randomFireSound];
+        SoundManager.instance.PlayBurningSound(clipToPlay,transform, 0.5f);
+        _nextBurningTime = Time.time + clipToPlay.length - 0.1f;
+      }
+      
       
     }
   }
