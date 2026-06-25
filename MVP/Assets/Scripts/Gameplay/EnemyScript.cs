@@ -44,7 +44,7 @@ public class Enemy : MonoBehaviour
     private float _fireTimer;
 
     [Header("VFX Feedback")]
-	[SerializeField] private ParticleSystem smokeParticleSystem;
+    [SerializeField] private ParticleSystem smokeParticleSystem;
 
     void Start()
     {
@@ -61,18 +61,20 @@ public class Enemy : MonoBehaviour
 
         // Sound design 
         randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
-        
-        if (smokeParticleSystem != null) {
-        	var emission = smokeParticleSystem.emission;
-        	emission.rateOverTime = 0f;
-    	}
+
+        if (smokeParticleSystem != null)
+        {
+            var emission = smokeParticleSystem.emission;
+            emission.rateOverTime = 0f;
+        }
     }
 
     void Update()
     {
-        if(!SoundManager.instance.IsTalking() && _burning){
+        if (!SoundManager.instance.IsTalking() && _burning)
+        {
             // AudioSource.PlayClipAtPoint(ShoutingSounds[randomCaracterSound],transform.position, 0.3f);
-            SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound],transform, 0.5f);
+            SoundManager.instance.PlaySound(ShoutingSounds[randomCaracterSound], transform, 0.5f);
         }
 
         if (_burning)
@@ -89,27 +91,34 @@ public class Enemy : MonoBehaviour
             _rb.linearVelocityX = _facingDirection * speed;
 
             _fireTimer += Time.deltaTime;
-            if (_fireTimer >= fireSpawnInterval) {
+            if (_fireTimer >= fireSpawnInterval)
+            {
                 _fireTimer = 0f;
                 SpawnFireParticle();
             }
         }
     }
 
-    public void GenerateSteam(uint particleHitCount) {
+    public void GenerateSteam(uint particleHitCount)
+    {
         if (smokeParticleSystem == null || !_burning) return;
         var emission = smokeParticleSystem.emission;
 
-        if (particleHitCount > 0) {
+        if (particleHitCount > 0)
+        {
             float emissionRate = Mathf.Min(particleHitCount * 5f, 50f);
             emission.rateOverTime = emissionRate;
-        } else {
+        }
+        else
+        {
             emission.rateOverTime = 0f;
         }
     }
 
-    void SpawnFireParticle() {
-        Vector2 randomOffset = Random.insideUnitCircle * (power * 0.3f); 
+    void SpawnFireParticle()
+    {
+        if (!_burning) return;
+        Vector2 randomOffset = Random.insideUnitCircle * (power * 0.3f);
         Vector3 spawnPos = transform.position + new Vector3(randomOffset.x, randomOffset.y, 0f);
 
         if (fireParticlePrefab != null)
@@ -187,7 +196,8 @@ public class Enemy : MonoBehaviour
         Gizmos.DrawLine(origin, origin + Vector2.down * groundCheckDistance);
     }
 
-    void OnDestroy() {
+    void OnDestroy()
+    {
         SoundManager.instance.KillSound();
     }
 }
