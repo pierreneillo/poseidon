@@ -10,7 +10,7 @@ public class Tree : Enemy
     }
     void Update()
     {
-
+        base.Update();
     }
 
     protected override void OnDestroy()

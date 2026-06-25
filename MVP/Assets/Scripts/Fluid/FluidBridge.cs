@@ -405,7 +405,7 @@ public class FluidBridge : MonoBehaviour
         PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
         if (player != null)
         {
-            Collider2D col = player.GetComponent<CircleCollider2D>();
+            Collider2D col = player.GetComponent<Collider2D>();
             if (col != null)
             {
                 obstacleData[0].minPos = col.bounds.min;
@@ -521,16 +521,19 @@ public class FluidBridge : MonoBehaviour
 
                 var nativeArray = request.GetData<uint>();
 
-                // TODO: change what happens when enemies get hit
                 for (int i = 1; i < max_obstacles; i++)
                 {
-                    if (nativeArray[i] > 5 && activeObstacles[i] != null)
-                    {
-                        // Damage enemy
-                        UnityEngine.Debug.Log($"Enenmy {i} touched");
-                        if (activeObstacles[i].InflictDamage(1f))
+                    if (activeObstacles[i] != null) {
+                        uint hits = nativeArray[i];
+                        activeObstacles[i].GenerateSteam(hits);
+                        if (hits > 5)
                         {
-                            activeObstacles[i] = null;
+                            // Damage enemy
+                            UnityEngine.Debug.Log($"Enenmy {i} touched");
+                            if (activeObstacles[i].InflictDamage(1f))
+                            {
+                                activeObstacles[i] = null;
+                            }
                         }
                     }
                 }

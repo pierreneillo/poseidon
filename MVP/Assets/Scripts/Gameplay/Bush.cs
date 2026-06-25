@@ -28,6 +28,7 @@ public class Bush : Enemy
 
     void Update()
     {
+        base.Update();
 
         if (_burning)
         {
