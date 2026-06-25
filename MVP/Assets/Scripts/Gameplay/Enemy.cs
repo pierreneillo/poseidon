@@ -103,8 +103,8 @@ public class Enemy : MonoBehaviour
       {
         Debug.Log("Enemy dead");
         FluidBridge.UnregisterObstacle(GPUObstacleID);
-        BushZone bush = GetComponentInChildren<BushZone>();
-        if (bush != null) Destroy(bush);
+        DamageZone zone = GetComponentInChildren<DamageZone>();
+        if (zone != null) Destroy(zone);
         if (hpBar != null) Destroy(hpBar.gameObject);
         if (fire != null) Destroy(fire.gameObject);
 

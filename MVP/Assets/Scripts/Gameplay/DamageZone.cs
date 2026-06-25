@@ -1,6 +1,6 @@
 using UnityEngine;
 
-public class BushZone : MonoBehaviour
+public class DamageZone : MonoBehaviour
 {
     [SerializeField] private float maxDamagePerSecond = 5f;
     [SerializeField] private float sigma = 3f;
@@ -16,6 +16,7 @@ public class BushZone : MonoBehaviour
     void Update()
     {
         if (_associatedEnemy != null && _associatedEnemy.InflictDamage(0) == true) {
+            Destroy(this);
             return;
         }
         PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
