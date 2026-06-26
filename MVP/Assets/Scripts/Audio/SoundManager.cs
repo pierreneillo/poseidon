@@ -27,7 +27,14 @@ public class SoundManager : MonoBehaviour
             return;
         }
         PlayBackground(backgroundClip, 0.04f);
-        Invoke("LaunchMusic",10f);
+        StartCoroutine(LaunchMusicWithDelay(10f));
+    }
+
+    private System.Collections.IEnumerator LaunchMusicWithDelay(float delay)
+    {
+        yield return new WaitForSeconds(delay); 
+        
+        PlayBackground(musicClip, 0.4f);
     }
 
     public void LaunchMusic(){
