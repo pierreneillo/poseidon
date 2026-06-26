@@ -24,7 +24,7 @@ public class SoundManager : MonoBehaviour
             Debug.LogError("Warning: Background Clip missing!");
             return;
         }
-        PlayBackground(backgroundClip, 0.1f);
+        PlayBackground(backgroundClip, 0.04f);
     }
 
     public void PlayBackground(AudioClip audioClip, float volume)
@@ -43,6 +43,11 @@ public class SoundManager : MonoBehaviour
     {
         CreateAudioSource("BurningSound", audioClip, spawnTransform, volume);
     }
+    
+    public void PlaySplass(AudioClip audioClip, Transform spawnTransform, float volume)
+    {
+        CreateAudioSource("Splass", audioClip, spawnTransform, volume, 1f);
+    }
 
     public void PlayFireSound(AudioClip audioClip, Transform spawnTransform, float volume)
     {
@@ -51,7 +56,7 @@ public class SoundManager : MonoBehaviour
         currentFireSound = CreateAudioSource("FireSound", audioClip, spawnTransform, volume);
     }
 
-    public AudioSource CreateAudioSource(string name, AudioClip audioClip, Transform spawnTransform, float volume)
+    public AudioSource CreateAudioSource(string name, AudioClip audioClip, Transform spawnTransform, float volume, float start = 0.0f)
     {
         // Création propre d'un seul GameObject (pas de Instantiate redondant)
         GameObject go = new GameObject(name);
@@ -66,6 +71,9 @@ public class SoundManager : MonoBehaviour
         audioSource.minDistance = 1f;
         audioSource.maxDistance = 20f;
         audioSource.rolloffMode = AudioRolloffMode.Linear; 
+
+        // To crop the start
+        audioSource.time = start;
 
         audioSource.Play();
 
