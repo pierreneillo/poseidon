@@ -221,7 +221,7 @@ GameObject:
   - component: {fileID: 6160165649684179551}
   m_Layer: 0
   m_Name: Tree
-  m_TagString: Untagged
+  m_TagString: Ground
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -410,7 +410,12 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: '::'
   maxHp: 50
+  waterDamage: 0.5
   hpBar: {fileID: 6542223158654123375}
   fire: {fileID: 5244328785575408756}
   min_fire_scale: 0
   hitSounds: []
+  power: 5
+  fireParticlePrefab: {fileID: 0}
+  fireSpawnInterval: 0.2
+  smokeParticleSystem: {fileID: 0}

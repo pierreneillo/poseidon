@@ -8,6 +8,7 @@ public class Enemy : MonoBehaviour
   // Public attributes
   [Header("Stats")]
   [SerializeField] protected float maxHp = 15f;
+  [SerializeField] protected float waterDamage = 1f;
   protected float hp;
 
   [Header("Rendering")]
@@ -120,7 +121,7 @@ public class Enemy : MonoBehaviour
     if (_burning)
     {
       // HP management
-      hp -= damages;
+      hp -= damages * waterDamage;
 
 
       if (damages > 0 && Time.time >= _nextHitSoundTime){

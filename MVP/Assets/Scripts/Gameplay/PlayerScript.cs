@@ -1,6 +1,6 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -23,7 +23,8 @@ public class PlayerScript : MonoBehaviour
 	[Header("HP")]
 	[SerializeField] private Image hpBar;
 	[SerializeField] private float maxHp = 15f;
-	private Vector2 hpBarSize;
+    [SerializeField] private float waterCost = 1f;
+    private Vector2 hpBarSize;
 	private float hp;
 	private Color init_c;
 	private Color end_c = new Color32(25, 25, 112, 255);
@@ -35,6 +36,7 @@ public class PlayerScript : MonoBehaviour
 	private bool _grounded = false;
 	private Vector3 _scale;
 	private bool _isFacingRight = true;
+	private bool _isThrowing = false;
 
 	// Projectile
 	public ProjectileBehaviour Projectile;
@@ -91,7 +93,7 @@ public class PlayerScript : MonoBehaviour
 	// Character movements
 	void Movement(InputAction.CallbackContext ctx)
 	{
-		_hSpeed = speed * ctx.ReadValue<Vector2>().x;
+        _hSpeed = speed * ctx.ReadValue<Vector2>().x;
 	}
 
 	void Jumping(InputAction.CallbackContext ctx)
@@ -144,26 +146,49 @@ public class PlayerScript : MonoBehaviour
 
 	private void OnThrowWaterInput(InputAction.CallbackContext context)
 	{
-		if (context.performed) animator.SetBool("isThrowing", true);
-		if (context.canceled) animator.SetBool("isThrowing", false);
+		if (context.performed)
+		{
+			animator.SetBool("isThrowing", true);
+			_isThrowing = true;
+		}
+		if (context.canceled)
+		{
+            animator.SetBool("isThrowing", false);
+			_isThrowing = false;
+        }
+			
 	}
 
 
 	public bool damagePlayer(float damages)
 	{
-		// HP management
 		hp -= damages;
-		UnityEngine.Debug.Log($"{damages} damages done, {hp} PV remaining");
 		hp = Mathf.Clamp(hp, 0f, maxHp);
-		float hpRatio = hp / maxHp;
-		// HP bar 
-		if (hpBar != null)
-		{
-			hpBar.fillAmount = hpRatio;
-			hpBar.color = Color.Lerp(end_c, init_c, hpRatio);
-		}
+
+		updateHpBar();
+
 		return false;
 	}
+
+	public void healPlayer(float particleCount)
+	{
+		hp += particleCount * waterCost;
+        hp = Mathf.Clamp(hp, 0f, maxHp);
+
+		updateHpBar();
+    }
+
+
+	private void updateHpBar()
+	{
+        float hpRatio = hp / maxHp;
+        // HP bar 
+        if (hpBar != null)
+        {
+            hpBar.fillAmount = hpRatio;
+            hpBar.color = Color.Lerp(end_c, init_c, hpRatio);
+        }
+    }
 
 	// Start is called once before the first execution of Update after the MonoBehavior is created
 	// "The Game starts"
@@ -185,8 +210,9 @@ public class PlayerScript : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		_rb.linearVelocityX = _hSpeed;
-		Flip(_rb.linearVelocityX);
+		if (!_isThrowing) _rb.linearVelocityX = _hSpeed;
+		else _rb.linearVelocityX = 0;
+		Flip(_hSpeed);
 		animator.SetBool("isMoving", (_hSpeed != 0));
 
 		// So we can later stick on the walls by changing the material or the material's friction
@@ -216,6 +242,22 @@ public class PlayerScript : MonoBehaviour
 					_scale.y,
 			_scale.z);
 		}
+	}
+
+	// Getters
+	public float getHp()
+	{
+		return this.hp;
+	}
+
+    public float getMaxHp()
+    {
+        return this.maxHp;
+    }
+
+	public float getWaterCost()
+	{
+		return this.waterCost;
 	}
 
 }

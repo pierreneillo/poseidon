@@ -26,7 +26,7 @@ public class Bush : Enemy
         _initScaleX = transform.localScale.x;
     }
 
-    void Update()
+    protected override void Update()
     {
         base.Update();
 
