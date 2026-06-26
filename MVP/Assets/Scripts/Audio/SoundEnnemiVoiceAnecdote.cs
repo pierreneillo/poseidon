@@ -3,8 +3,6 @@ using UnityEngine;
 
 public class SoundEnnemiVoiceAnecdote : MonoBehaviour
 {
-    public static SoundEnnemiVoiceAnecdote instance;
-
     public AudioClip sound;
     public float delay = 2f;
 
@@ -13,11 +11,11 @@ public class SoundEnnemiVoiceAnecdote : MonoBehaviour
     private bool hasPlayed = false;
     public bool isSafe = false;
 
+    public bool wantVoice = false;
+
 
     public void Awake(){
-        if (instance == null){
-            instance = this;
-        }
+
     }
 
 
@@ -43,7 +41,7 @@ public class SoundEnnemiVoiceAnecdote : MonoBehaviour
 
     private void Update()
     {
-        if (isSafe){
+        if (isSafe && wantVoice){
             if (!playerInRange || hasPlayed)
                 return;
 
@@ -52,7 +50,7 @@ public class SoundEnnemiVoiceAnecdote : MonoBehaviour
             if (timer >= delay)
             {
                 hasPlayed = true;
-                SoundManager.instance.PlaySound(sound,transform, 0.4f);
+                SoundManager.instance.PlayVoice(sound,transform, 0.4f);
             }
         }
     }

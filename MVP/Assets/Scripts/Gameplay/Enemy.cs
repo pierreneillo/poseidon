@@ -1,11 +1,15 @@
 using Unity.VisualScripting;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
 {
+  public bool wantSpeaches = false; 
+
   // Public attributes
   [Header("Stats")]
   [SerializeField] protected float maxHp = 15f;
+  [SerializeField] protected float waterDamage = 1f;
   protected float hp;
 
   [Header("Rendering")]
@@ -16,6 +20,11 @@ public class Enemy : MonoBehaviour
   [SerializeField] protected float min_fire_scale = 0f;
 
   [SerializeField] protected AudioClip[] hitSounds;
+  [SerializeField] protected AudioClip[] fireDesappering;
+  [SerializeField] protected AudioClip[] fireSound;
+  [SerializeField] private AudioClip[] ShoutingSounds;
+  [SerializeField] private AudioClip[] AnecdoteSounds;
+  private int randomCaracterSound;
 
   [Header("Fire Gameplay")]
   [SerializeField] protected float power = 5f;
@@ -26,11 +35,22 @@ public class Enemy : MonoBehaviour
   [Header("VFX Feedback")]
   [SerializeField] protected ParticleSystem smokeParticleSystem;
 
+  [Header("Audio Cooldown")]
+  [SerializeField] protected float shoutCooldown = 1f; 
+  protected float _nextShoutTime = 0f;
+  protected float _nextBurningTime = 0f;
+
   // protected attributes
   protected Rigidbody2D _rb;
   protected bool _burning;
+  protected float _nextHitSoundTime = 0f;
+  protected List<AudioSource> currentVoiceSources;
 
   public int GPUObstacleID { get; private set; } = -1;
+
+  [Header("Tutorial Dialogue")]
+  [TextArea] public string deathDialogueText;
+  public float deathDialogueDelay = 1.5f;
 
   protected virtual void Start()
   {
@@ -43,12 +63,18 @@ public class Enemy : MonoBehaviour
     hpBarSize = hpBar.transform.localScale;
     fireSize = fire.transform.localScale;
     _burning = true;
+    currentVoiceSources = new List<AudioSource>();
 
     if (smokeParticleSystem != null)
     {
         var emission = smokeParticleSystem.emission;
         emission.rateOverTime = 0f;
     }
+    
+    // Sound design 
+    randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
+
+    gameObject.layer = LayerMask.NameToLayer("Enemy");
   }
 
   protected virtual void Update()
@@ -61,6 +87,24 @@ public class Enemy : MonoBehaviour
           _fireTimer = 0f;
           SpawnFireParticle();
       }
+      
+
+    // Sounds
+      // Shout
+      if(Time.time >= _nextShoutTime && wantSpeaches){
+        AudioClip clipToPlay = ShoutingSounds[randomCaracterSound];
+        currentVoiceSources.Add(SoundManager.instance.PlayVoice(clipToPlay,transform, 0.8f));
+        _nextShoutTime = Time.time + clipToPlay.length + shoutCooldown;
+      }
+      // Burning
+      if(Time.time >= _nextBurningTime){
+        int randomFireSound = Random.Range(0, fireSound.Length);
+        AudioClip clipToPlay = fireSound[randomFireSound];
+        currentVoiceSources.Add(SoundManager.instance.PlayBurningSound(clipToPlay,transform, 0.8f));
+        _nextBurningTime = Time.time + clipToPlay.length - 0.1f;
+      }
+      
+      
     }
   }
 
@@ -97,7 +141,18 @@ public class Enemy : MonoBehaviour
     if (_burning)
     {
       // HP management
-      hp -= damages;
+      hp -= damages * waterDamage;
+
+
+      if (damages > 0 && Time.time >= _nextHitSoundTime){
+        // Play sound
+        int rand = Random.Range(0, hitSounds.Length);
+        AudioSource.PlayClipAtPoint(hitSounds[rand], transform.position, 0.5f);
+        rand = Random.Range(0, fireDesappering.Length);
+        SoundManager.instance.PlayFireSound(fireDesappering[rand], transform, 0.3f);
+        // AudioSource.PlayClipAtPoint(fireDesappering[rand], transform.position, 0.3f);
+        _nextHitSoundTime = Time.time + 0.5f;
+      }
 
       if (hp <= 0)
       {
@@ -109,8 +164,32 @@ public class Enemy : MonoBehaviour
         if (fire != null) Destroy(fire.gameObject);
 
         _burning = false;
-        if (SoundManager.instance != null) SoundManager.instance.KillSound();
 
+        // Sound Design
+        for (int i = 0 ; i < currentVoiceSources.Count ; i++)
+        {
+            if (currentVoiceSources[i] != null) 
+            {
+                Destroy(currentVoiceSources[i].gameObject);
+            }
+        }
+        currentVoiceSources = new List<AudioSource>();
+        
+        if (wantSpeaches){
+          SoundEnnemiVoiceAnecdote localAnecdote = GetComponentInChildren<SoundEnnemiVoiceAnecdote>();
+          if (localAnecdote != null) {
+            localAnecdote.wantVoice = true;
+            localAnecdote.isSafe = true;
+            // SÉCURITÉ : Évite un crash si tu as moins d'anecdotes que de sons de cris
+            if (AnecdoteSounds != null && AnecdoteSounds.Length > 0) {
+              localAnecdote.sound = AnecdoteSounds[randomCaracterSound % AnecdoteSounds.Length];
+            }
+          }
+        }
+        if (!string.IsNullOrEmpty(deathDialogueText))
+        {
+          DialogueManager.instance.ShowDialogueWithDelay(deathDialogueText, deathDialogueDelay);
+        }
         return true;
       }
 
@@ -128,12 +207,10 @@ public class Enemy : MonoBehaviour
       return false;
     }
 
-    return false;
+    return true;
   }
 
   protected virtual void OnDestroy()
   {
-    if (SoundManager.instance != null)
-      SoundManager.instance.KillSound();
   }
 }

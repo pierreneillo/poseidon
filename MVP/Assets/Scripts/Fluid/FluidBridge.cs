@@ -10,6 +10,7 @@ using System.Numerics;
 using System.Collections.Generic;
 using Vector2 = UnityEngine.Vector2;
 using Unity.VisualScripting;
+using System;
 
 [System.Serializable] // will be useful for debug
 [StructLayout(LayoutKind.Sequential)]
@@ -95,6 +96,8 @@ public class FluidBridge : MonoBehaviour
     private static Enemy[] activeObstacles = new Enemy[max_obstacles];
     private static int currentCount = 1;
 
+    private static PlayerScript player;
+
     [Header("Water sources")]
     private static List<WaterSource> waterSources = new List<WaterSource>();
 
@@ -135,6 +138,13 @@ public class FluidBridge : MonoBehaviour
     public static void UnregisterObstacle(int id)
     {
         if (id > 0 && id < max_obstacles) activeObstacles[id] = null;
+    }
+
+    void Awake() {
+        waterSources.Clear();
+        System.Array.Clear(activeObstacles, 0, activeObstacles.Length);
+        currentCount = 1;
+        everlastingParticleCount = 0;
     }
 
     void OnEnable()
@@ -179,11 +189,13 @@ public class FluidBridge : MonoBehaviour
             for (int i = 0; i < currentParticleCount; i++)
             {
                 everlastingWater[i].position = new Vector2(waterSource.transform.position.x, waterSource.transform.position.y) + waterSource.getSpawnRadius() * Random.insideUnitCircle;
-                everlastingWater[i].velocity = Random.insideUnitCircle;
+                everlastingWater[i].velocity = Vector2.zero;
             }
+            float[] creationTime = new float[currentParticleCount];
+            System.Array.Fill(creationTime, 0f);
 
             particleBuffer.SetData(everlastingWater, 0, (int)everlastingParticleCount, (int)currentParticleCount);
-
+            creationTimeBuffer.SetData(creationTime, 0, (int)everlastingParticleCount, (int)currentParticleCount);
             everlastingParticleCount += currentParticleCount;
         }
         particleCount = everlastingParticleCount;
@@ -193,6 +205,9 @@ public class FluidBridge : MonoBehaviour
 
     void Start()
     {
+
+        player = UnityEngine.Object.FindFirstObjectByType<PlayerScript>();
+
         if (vfxGraph == null || pbfShader == null || throwWaterAction == null)
         {
             throw new System.NullReferenceException($"[FluidBridge] VisualEffect or PBFShader reference is missing on {gameObject.name}! Did you forget to drag and drop it in the Inspector?");
@@ -240,7 +255,7 @@ public class FluidBridge : MonoBehaviour
 
 
         // Create the Signed Distance Field
-        AxisAlignedRectWall[] walls = Object.FindObjectsByType<AxisAlignedRectWall>(FindObjectsSortMode.None);
+        AxisAlignedRectWall[] walls = UnityEngine.Object.FindObjectsByType<AxisAlignedRectWall>(FindObjectsSortMode.None);
         sdfValues = new float[sdfResolution * sdfResolution];
         sdfGradientValues = new Vector2[sdfResolution * sdfResolution];
 
@@ -397,15 +412,15 @@ public class FluidBridge : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f) return;
+
         accumulator += Time.deltaTime;
 
-
         System.Array.Clear(obstacleData, 0, obstacleData.Length);
-
-        PlayerScript player = Object.FindFirstObjectByType<PlayerScript>();
+        
         if (player != null)
         {
-            Collider2D col = player.GetComponent<Collider2D>();
+            Collider2D col = player.GetComponent<CircleCollider2D>();
             if (col != null)
             {
                 obstacleData[0].minPos = col.bounds.min;
@@ -445,7 +460,9 @@ public class FluidBridge : MonoBehaviour
         pbfShader.SetInt("ObstacleCount", currentCount);
         pbfShader.SetFloat("Time", Time.time);
 
-
+        pbfShader.SetFloat("PlayerHp", player.getHp());
+        pbfShader.SetFloat("PlayerMaxHp", player.getMaxHp());
+        pbfShader.SetFloat("WaterCost", player.getWaterCost());
 
 
         // TODO ? : rename these
@@ -520,36 +537,47 @@ public class FluidBridge : MonoBehaviour
                 if (request.hasError || !Application.isPlaying) { isWaitingForFeedback = false; return; }
 
                 var nativeArray = request.GetData<uint>();
+                
+                try {
+                    // Heal player
+                    player.healPlayer(nativeArray[0]);
 
-                for (int i = 1; i < max_obstacles; i++)
-                {
-                    if (activeObstacles[i] != null) {
-                        uint hits = nativeArray[i];
-                        activeObstacles[i].GenerateSteam(hits);
-                        if (hits > 5)
-                        {
-                            // Damage enemy
-                            UnityEngine.Debug.Log($"Enenmy {i} touched");
-                            if (activeObstacles[i].InflictDamage(1f))
+                    // Damage enemies
+                    for (int i = 1; i < max_obstacles; i++)
+                    {
+                        if (activeObstacles[i] != null) {
+                            uint hits = nativeArray[i];
+                            activeObstacles[i].GenerateSteam(hits);
+                            if (hits > 0)
                             {
-                                activeObstacles[i] = null;
+                                // Damage enemy
+                                UnityEngine.Debug.Log($"Enenmy {i} touched");
+                                if (activeObstacles[i].InflictDamage(hits))
+                                {
+                                    activeObstacles[i] = null;
+                                }
                             }
                         }
                     }
-                }
 
-                System.Array.Clear(feedbackData, 0, feedbackData.Length);
-                collisionFeedbackBuffer.SetData(feedbackData);
-                isWaitingForFeedback = false;
+                    System.Array.Clear(feedbackData, 0, feedbackData.Length);
+                    collisionFeedbackBuffer.SetData(feedbackData);
+                } finally {
+                    isWaitingForFeedback = false;
+                }
             });
         }
     }
 
     void ThrowWater(bool isFacingRight)
     {
+        // Spawn less particle when almost dead
+        float hpRatio = player.getHp() / player.getMaxHp();
+        uint spawnableParticles = (uint)Math.Floor(particlesPerFrame * hpRatio);
+
         // Test if we reached the end of the buffer
-        uint spawnableBeforeLooping = System.Math.Min(maxParticleCount - particleIdx, particlesPerFrame);
-        uint spawnableAfterLooping = particlesPerFrame - spawnableBeforeLooping;
+        uint spawnableBeforeLooping = System.Math.Min(maxParticleCount - particleIdx, spawnableParticles);
+        uint spawnableAfterLooping = spawnableParticles - spawnableBeforeLooping;
 
         // Spawn point
         Vector2 baseSpawnPos = spawnPoint.position;
@@ -558,14 +586,15 @@ public class FluidBridge : MonoBehaviour
             baseSpawnDir.x = -baseSpawnDir.x;
 
         // Particle properties
-        FluidParticle[] spawnedWater = new FluidParticle[particlesPerFrame];
-        for (int i = 0; i < particlesPerFrame; i++)
+        FluidParticle[] spawnedWater = new FluidParticle[spawnableParticles];
+        for (int i = 0; i < spawnableParticles; i++)
         {
             spawnedWater[i].position = baseSpawnPos + Random.insideUnitCircle * spawnRadius;
-            spawnedWater[i].velocity = (baseSpawnDir + Random.insideUnitCircle * sprayAngle) * initialVelocity;
+            spawnedWater[i].velocity = (baseSpawnDir + Random.insideUnitCircle * sprayAngle * (1 - hpRatio) )
+                * initialVelocity * (1 - 0.5f * (1 - hpRatio));
         }
 
-        float[] creationTime = new float[particlesPerFrame];
+        float[] creationTime = new float[spawnableParticles];
         System.Array.Fill(creationTime, Time.time);
 
         // Spawning particles before looping
@@ -589,6 +618,9 @@ public class FluidBridge : MonoBehaviour
         else particleIdx += spawnableBeforeLooping;
         if (particleIdx == maxParticleCount) particleIdx = everlastingParticleCount;
 
+
+        // Damage player
+        player.healPlayer(-spawnableParticles);
     }
 
     void OnDestroy()

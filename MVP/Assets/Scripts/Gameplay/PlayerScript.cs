@@ -1,6 +1,6 @@
+using System;
 using UnityEngine;
 using UnityEngine.InputSystem;
-using System;
 using UnityEngine.UI;
 
 [RequireComponent(typeof(Rigidbody2D))]
@@ -23,7 +23,8 @@ public class PlayerScript : MonoBehaviour
 	[Header("HP")]
 	[SerializeField] private Image hpBar;
 	[SerializeField] private float maxHp = 15f;
-	private Vector2 hpBarSize;
+    [SerializeField] private float waterCost = 1f;
+    private Vector2 hpBarSize;
 	private float hp;
 	private Color init_c;
 	private Color end_c = new Color32(25, 25, 112, 255);
@@ -35,10 +36,17 @@ public class PlayerScript : MonoBehaviour
 	private bool _grounded = false;
 	private Vector3 _scale;
 	private bool _isFacingRight = true;
+	private bool _isThrowing = false;
 
 	// Projectile
 	public ProjectileBehaviour Projectile;
 	public Transform LaunchOffset;
+
+	// Sound
+  	[SerializeField] protected AudioClip[] splassingSounds;
+	protected float _splassTimer = 0;
+  	[SerializeField] protected AudioClip[] pacesRunning;
+	protected float _paceTimer = 0;
 
 	[Header("VFX Feedback")]
 	[SerializeField] private ParticleSystem smokeParticleSystem;
@@ -64,12 +72,12 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Enable();  // Makes it possible to use actions inside action maps in Unity (predefined actions of the rendering engine) => we find in action maps : Player -> lot of actions (for instance Player -> Move for next line) ; thus we setup settings
 		actions.Player.Move.performed += Movement;  // Assign the Method "Movement" written below to the performance of a movement
 		actions.Player.Jump.performed += Jumping;   // Same thing with "Jumping"
-		actions.Player.Attack.performed += TriggerProjectile;
+		// actions.Player.Attack.performed += TriggerProjectile;
 		actions.Player.ThrowWater.performed += OnThrowWaterInput;
 
 		actions.Player.Move.canceled += Movement;
 		actions.Player.Jump.canceled += Jumping;
-		actions.Player.Attack.canceled += TriggerProjectile;
+		// actions.Player.Attack.canceled += TriggerProjectile;
 		actions.Player.ThrowWater.canceled += OnThrowWaterInput;
 	}
 
@@ -79,7 +87,7 @@ public class PlayerScript : MonoBehaviour
 		actions.Player.Disable();
 		actions.Player.Move.performed -= Movement;
 		actions.Player.Jump.performed -= Jumping;
-		actions.Player.Attack.performed -= TriggerProjectile;
+		// actions.Player.Attack.performed -= TriggerProjectile;
 
 		actions.Player.ThrowWater.performed -= OnThrowWaterInput;
 		actions.Player.ThrowWater.canceled -= OnThrowWaterInput;
@@ -91,11 +99,12 @@ public class PlayerScript : MonoBehaviour
 	// Character movements
 	void Movement(InputAction.CallbackContext ctx)
 	{
-		_hSpeed = speed * ctx.ReadValue<Vector2>().x;
+        _hSpeed = speed * ctx.ReadValue<Vector2>().x;
 	}
 
 	void Jumping(InputAction.CallbackContext ctx)
 	{
+		if (Time.timeScale == 0f) return;
 		// The action occurs when we trigger the space bar
 		// and not when we release it !
 		if (ctx.performed && _remainingJumps > 0)
@@ -144,26 +153,50 @@ public class PlayerScript : MonoBehaviour
 
 	private void OnThrowWaterInput(InputAction.CallbackContext context)
 	{
-		if (context.performed) animator.SetBool("isThrowing", true);
-		if (context.canceled) animator.SetBool("isThrowing", false);
+		if (Time.timeScale == 0f) return;
+		if (context.performed)
+		{
+			animator.SetBool("isThrowing", true);
+			_isThrowing = true;
+		}
+		if (context.canceled)
+		{
+            animator.SetBool("isThrowing", false);
+			_isThrowing = false;
+        }
+			
 	}
 
 
 	public bool damagePlayer(float damages)
 	{
-		// HP management
 		hp -= damages;
-		UnityEngine.Debug.Log($"{damages} damages done, {hp} PV remaining");
 		hp = Mathf.Clamp(hp, 0f, maxHp);
-		float hpRatio = hp / maxHp;
-		// HP bar 
-		if (hpBar != null)
-		{
-			hpBar.fillAmount = hpRatio;
-			hpBar.color = Color.Lerp(end_c, init_c, hpRatio);
-		}
+
+		updateHpBar();
+
 		return false;
 	}
+
+	public void healPlayer(float particleCount)
+	{
+		hp += particleCount * waterCost;
+        hp = Mathf.Clamp(hp, 0f, maxHp);
+
+		updateHpBar();
+    }
+
+
+	private void updateHpBar()
+	{
+        float hpRatio = hp / maxHp;
+        // HP bar 
+        if (hpBar != null)
+        {
+            hpBar.fillAmount = hpRatio;
+            hpBar.color = Color.Lerp(end_c, init_c, hpRatio);
+        }
+    }
 
 	// Start is called once before the first execution of Update after the MonoBehavior is created
 	// "The Game starts"
@@ -185,8 +218,26 @@ public class PlayerScript : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
-		_rb.linearVelocityX = _hSpeed;
-		Flip(_rb.linearVelocityX);
+		if (Time.timeScale == 0f) return;
+		if (!_isThrowing) _rb.linearVelocityX = _hSpeed;
+		else {
+			_rb.linearVelocityX = 0;
+			if (_splassTimer < Time.time && true){		// TO DO: CHANGE TRUE WITH CRITERIA FOR STOPPING WATER
+				int rand = UnityEngine.Random.Range(0,splassingSounds.Length);
+				AudioClip clipToPlay = splassingSounds[rand];
+				SoundManager.instance.PlaySplass(clipToPlay,transform, 0.7f);
+				_splassTimer = Time.time + 0.5f;
+			}
+		}
+
+		if ((_hSpeed != 0) && _grounded && _paceTimer < Time.time && true){		// Change true with grounded		
+			int rand = UnityEngine.Random.Range(0,pacesRunning.Length);
+			AudioClip clipToPlay = pacesRunning[rand];
+			SoundManager.instance.PlayPace(clipToPlay,transform, 0.5f);
+			_paceTimer = Time.time + 0.35f;		// 8 frames over 30 is the duration of one pace
+		}
+
+		Flip(_hSpeed);
 		animator.SetBool("isMoving", (_hSpeed != 0));
 
 		// So we can later stick on the walls by changing the material or the material's friction
@@ -216,6 +267,22 @@ public class PlayerScript : MonoBehaviour
 					_scale.y,
 			_scale.z);
 		}
+	}
+
+	// Getters
+	public float getHp()
+	{
+		return this.hp;
+	}
+
+    public float getMaxHp()
+    {
+        return this.maxHp;
+    }
+
+	public float getWaterCost()
+	{
+		return this.waterCost;
 	}
 
 }
