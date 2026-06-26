@@ -47,6 +47,10 @@ public class Enemy : MonoBehaviour
 
   public int GPUObstacleID { get; private set; } = -1;
 
+  [Header("Tutorial Dialogue")]
+  [TextArea] public string deathDialogueText;
+  public float deathDialogueDelay = 1.5f;
+
   protected virtual void Start()
   {
     // Movement
@@ -173,6 +177,10 @@ public class Enemy : MonoBehaviour
               localAnecdote.sound = AnecdoteSounds[randomCaracterSound];
             }
           }
+        }
+        if (!string.IsNullOrEmpty(deathDialogueText))
+        {
+          DialogueManager.instance.ShowDialogueWithDelay(deathDialogueText, deathDialogueDelay);
         }
         return true;
       }
