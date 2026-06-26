@@ -403,11 +403,11 @@ public class FluidBridge : MonoBehaviour
 
     void Update()
     {
+        if (Time.timeScale == 0f) return;
+
         accumulator += Time.deltaTime;
 
-
         System.Array.Clear(obstacleData, 0, obstacleData.Length);
-
         
         if (player != null)
         {

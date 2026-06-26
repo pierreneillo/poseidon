@@ -37,7 +37,7 @@ public class DialogueManager : MonoBehaviour {
         isDialogueActive = false;
         dialoguePanel.SetActive(false);
 
-        Time.timeScale = 1f;
+        StartCoroutine(ResumeTimeNextFrame());
     }
 
     public void ShowDialogueWithDelay(string text, float delay) {
@@ -47,5 +47,10 @@ public class DialogueManager : MonoBehaviour {
     private IEnumerator DelayedDialogueRoutine(string text, float delay) {
         yield return new WaitForSeconds(delay);
         ShowDialogue(text);
+    }
+
+    private IEnumerator ResumeTimeNextFrame() {
+        yield return null;
+        Time.timeScale = 1f;
     }
 }

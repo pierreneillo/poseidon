@@ -98,6 +98,7 @@ public class PlayerScript : MonoBehaviour
 
 	void Jumping(InputAction.CallbackContext ctx)
 	{
+		if (Time.timeScale == 0f) return;
 		// The action occurs when we trigger the space bar
 		// and not when we release it !
 		if (ctx.performed && _remainingJumps > 0)
@@ -146,6 +147,7 @@ public class PlayerScript : MonoBehaviour
 
 	private void OnThrowWaterInput(InputAction.CallbackContext context)
 	{
+		if (Time.timeScale == 0f) return;
 		if (context.performed)
 		{
 			animator.SetBool("isThrowing", true);
@@ -210,6 +212,7 @@ public class PlayerScript : MonoBehaviour
 	// Update is called once per frame
 	void Update()
 	{
+		if (Time.timeScale == 0f) return;
 		if (!_isThrowing) _rb.linearVelocityX = _hSpeed;
 		else _rb.linearVelocityX = 0;
 		Flip(_hSpeed);
