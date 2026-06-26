@@ -72,6 +72,8 @@ public class Enemy : MonoBehaviour
     
     // Sound design 
     randomCaracterSound = Random.Range(0, ShoutingSounds.Length);
+
+    gameObject.layer = LayerMask.NameToLayer("Enemy");
   }
 
   protected virtual void Update()

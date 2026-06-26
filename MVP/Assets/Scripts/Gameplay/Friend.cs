@@ -7,6 +7,10 @@ public class Friend : MonoBehaviour {
 
     private bool hasSpoken = false;
 
+    private void Start() {
+        gameObject.layer = LayerMask.NameToLayer("Friend");
+    }
+
     private void OnTriggerEnter2D(Collider2D other)
     {
         if (!hasSpoken && other.CompareTag("Player"))

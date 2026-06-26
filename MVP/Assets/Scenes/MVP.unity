@@ -885,7 +885,7 @@ Transform:
   m_GameObject: {fileID: 280641535}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 70.4, y: 12.5, z: 0}
+  m_LocalPosition: {x: 70.51, y: 12.37, z: 0}
   m_LocalScale: {x: 2, y: 2, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1460,7 +1460,7 @@ Camera:
   m_Depth: -1
   m_CullingMask:
     serializedVersion: 2
-    m_Bits: 183
+    m_Bits: 951
   m_RenderingPath: -1
   m_TargetTexture: {fileID: 0}
   m_TargetDisplay: 0
@@ -5465,8 +5465,8 @@ Transform:
   m_GameObject: {fileID: 1795243817}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 70.48, y: -1.6528, z: 0}
-  m_LocalScale: {x: 7.3374596, y: 26.952621, z: 1}
+  m_LocalPosition: {x: 70.4681, y: -1.7721, z: 0}
+  m_LocalScale: {x: 7.361673, y: 26.712744, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 110955726}
@@ -6284,11 +6284,11 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1002677551508421454, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_CallbackLayers.m_Bits
-      value: 128
+      value: 896
       objectReference: {fileID: 0}
     - target: {fileID: 1002677551508421454, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_ContactCaptureLayers.m_Bits
-      value: 128
+      value: 896
       objectReference: {fileID: 0}
     - target: {fileID: 1672249863325602562, guid: 23ab59023559a6a48b9cf4c751404ece, type: 3}
       propertyPath: m_LocalScale.x
