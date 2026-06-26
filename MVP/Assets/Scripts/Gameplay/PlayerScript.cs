@@ -222,7 +222,7 @@ public class PlayerScript : MonoBehaviour
 			if (_splassTimer < Time.time && true){		// TO DO: CHANGE TRUE WITH CRITERIA FOR STOPPING WATER
 				int rand = UnityEngine.Random.Range(0,splassingSounds.Length);
 				AudioClip clipToPlay = splassingSounds[rand];
-				SoundManager.instance.PlaySplass(clipToPlay,transform, 0.5f);
+				SoundManager.instance.PlaySplass(clipToPlay,transform, 0.7f);
 				_splassTimer = Time.time + 0.5f;
 			}
 		}

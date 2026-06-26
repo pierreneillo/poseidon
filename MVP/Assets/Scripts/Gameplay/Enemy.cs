@@ -87,14 +87,14 @@ public class Enemy : MonoBehaviour
       // Shout
       if(Time.time >= _nextShoutTime && wantSpeaches){
         AudioClip clipToPlay = ShoutingSounds[randomCaracterSound];
-        currentVoiceSources.Add(SoundManager.instance.PlayVoice(clipToPlay,transform, 0.5f));
+        currentVoiceSources.Add(SoundManager.instance.PlayVoice(clipToPlay,transform, 0.8f));
         _nextShoutTime = Time.time + clipToPlay.length + shoutCooldown;
       }
       // Burning
       if(Time.time >= _nextBurningTime){
         int randomFireSound = Random.Range(0, fireSound.Length);
         AudioClip clipToPlay = fireSound[randomFireSound];
-        SoundManager.instance.PlayBurningSound(clipToPlay,transform, 0.5f);
+        currentVoiceSources.Add(SoundManager.instance.PlayBurningSound(clipToPlay,transform, 0.8f));
         _nextBurningTime = Time.time + clipToPlay.length - 0.1f;
       }
       
