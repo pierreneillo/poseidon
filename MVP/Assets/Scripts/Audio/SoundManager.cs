@@ -49,6 +49,11 @@ public class SoundManager : MonoBehaviour
         CreateAudioSource("Splass", audioClip, spawnTransform, volume, 1f);
     }
 
+    public void PlayPace(AudioClip audioClip, Transform spawnTransform, float volume)
+    {
+        CreateAudioSource("Pace", audioClip, spawnTransform, volume, 0.06f);
+    }
+
     public void PlayFireSound(AudioClip audioClip, Transform spawnTransform, float volume)
     {
         // Pour le feu, on peut garder la destruction pour éviter un brouhaha énorme
