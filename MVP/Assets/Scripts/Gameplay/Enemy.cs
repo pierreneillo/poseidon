@@ -32,9 +32,14 @@ public class Enemy : MonoBehaviour
   [Header("VFX Feedback")]
   [SerializeField] protected ParticleSystem smokeParticleSystem;
 
+  [Header("Audio Cooldown")]
+  [SerializeField] protected float shoutCooldown = 1f; 
+  protected float _nextShoutTime = 0f;
+
   // protected attributes
   protected Rigidbody2D _rb;
   protected bool _burning;
+  protected float _nextHitSoundTime = 0f;
 
   public int GPUObstacleID { get; private set; } = -1;
 
@@ -73,8 +78,10 @@ public class Enemy : MonoBehaviour
       
 
       // Sound
-      if(!SoundManager.instance.IsTalking() && _burning && wantSpeaches){
-          SoundManager.instance.PlayVoice(ShoutingSounds[randomCaracterSound],transform, 0.5f);
+      if(Time.time >= _nextShoutTime && _burning && wantSpeaches){
+        AudioClip clipToPlay = ShoutingSounds[randomCaracterSound];
+        SoundManager.instance.PlayVoice(clipToPlay,transform, 0.5f);
+        _nextShoutTime = Time.time + clipToPlay.length + shoutCooldown;
       }
       
     }
@@ -116,13 +123,14 @@ public class Enemy : MonoBehaviour
       hp -= damages;
 
 
-      if (damages > 0){
+      if (damages > 0 && Time.time >= _nextHitSoundTime){
         // Play sound
         int rand = Random.Range(0, hitSounds.Length);
         AudioSource.PlayClipAtPoint(hitSounds[rand], transform.position, 0.5f);
         rand = Random.Range(0, fireDesappering.Length);
         SoundManager.instance.PlayFireSound(fireDesappering[rand], transform, 0.3f);
         // AudioSource.PlayClipAtPoint(fireDesappering[rand], transform.position, 0.3f);
+        _nextHitSoundTime = Time.time + 0.5f;
       }
 
       if (hp <= 0)
@@ -137,14 +145,18 @@ public class Enemy : MonoBehaviour
         _burning = false;
 
         // Sound Design
-        if (SoundManager.instance != null) SoundManager.instance.KillSounds();
+        // if (SoundManager.instance != null) SoundManager.instance.KillSounds();
         
         if (wantSpeaches){
-          SoundEnnemiVoiceAnecdote.instance.wantVoice = true;
-          SoundEnnemiVoiceAnecdote.instance.isSafe = true;
-          SoundEnnemiVoiceAnecdote.instance.sound = AnecdoteSounds[randomCaracterSound];
+          SoundEnnemiVoiceAnecdote localAnecdote = GetComponentInChildren<SoundEnnemiVoiceAnecdote>();
+          if (localAnecdote != null) {
+            localAnecdote.wantVoice = true;
+            localAnecdote.isSafe = true;
+            if (AnecdoteSounds != null && AnecdoteSounds.Length > 0) {
+              localAnecdote.sound = AnecdoteSounds[randomCaracterSound];
+            }
+          }
         }
-
         return true;
       }
 
@@ -167,7 +179,5 @@ public class Enemy : MonoBehaviour
 
   protected virtual void OnDestroy()
   {
-    if (SoundManager.instance != null)
-      SoundManager.instance.KillSounds();
   }
 }

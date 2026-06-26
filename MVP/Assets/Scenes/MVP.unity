@@ -822,7 +822,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
       propertyPath: wantSpeaches
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 3332899294402951976, guid: bef0ace6df0b5c46ba23838fdde758fc, type: 3}
       propertyPath: backgroundSound
@@ -2950,7 +2950,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 6160165649684179551, guid: bf4d05296aa2265a3a2105cdc20b9c09, type: 3}
       propertyPath: wantSpeaches
-      value: 0
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 6160165649684179551, guid: bf4d05296aa2265a3a2105cdc20b9c09, type: 3}
       propertyPath: backgroundSound
