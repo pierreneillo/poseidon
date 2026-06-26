@@ -8,6 +8,8 @@ public class SoundManager : MonoBehaviour
     private AudioSource currentFireSound = null;
     private AudioSource backgroundSound = null;
     [SerializeField] private AudioClip backgroundClip;
+    private AudioSource music = null;
+    [SerializeField] private AudioClip musicClip;
 
     public void Awake()
     {
@@ -24,7 +26,12 @@ public class SoundManager : MonoBehaviour
             Debug.LogError("Warning: Background Clip missing!");
             return;
         }
-        PlayBackground(backgroundClip, 0.1f);
+        PlayBackground(backgroundClip, 0.04f);
+        Invoke("LaunchMusic",10f);
+    }
+
+    public void LaunchMusic(){
+        PlayBackground(musicClip, 0.4f);
     }
 
     public void PlayBackground(AudioClip audioClip, float volume)
@@ -39,9 +46,19 @@ public class SoundManager : MonoBehaviour
         return CreateAudioSource("VoiceSound", audioClip, spawnTransform, volume);
     }
 
-    public void PlayBurningSound(AudioClip audioClip, Transform spawnTransform, float volume)
+    public AudioSource PlayBurningSound(AudioClip audioClip, Transform spawnTransform, float volume)
     {
-        CreateAudioSource("BurningSound", audioClip, spawnTransform, volume);
+        return CreateAudioSource("BurningSound", audioClip, spawnTransform, volume);
+    }
+    
+    public void PlaySplass(AudioClip audioClip, Transform spawnTransform, float volume)
+    {
+        CreateAudioSource("Splass", audioClip, spawnTransform, volume, 1f);
+    }
+
+    public void PlayPace(AudioClip audioClip, Transform spawnTransform, float volume)
+    {
+        CreateAudioSource("Pace", audioClip, spawnTransform, volume, 0.06f);
     }
 
     public void PlayFireSound(AudioClip audioClip, Transform spawnTransform, float volume)
@@ -51,7 +68,7 @@ public class SoundManager : MonoBehaviour
         currentFireSound = CreateAudioSource("FireSound", audioClip, spawnTransform, volume);
     }
 
-    public AudioSource CreateAudioSource(string name, AudioClip audioClip, Transform spawnTransform, float volume)
+    public AudioSource CreateAudioSource(string name, AudioClip audioClip, Transform spawnTransform, float volume, float start = 0.0f)
     {
         // Création propre d'un seul GameObject (pas de Instantiate redondant)
         GameObject go = new GameObject(name);
@@ -66,6 +83,9 @@ public class SoundManager : MonoBehaviour
         audioSource.minDistance = 1f;
         audioSource.maxDistance = 20f;
         audioSource.rolloffMode = AudioRolloffMode.Linear; 
+
+        // To crop the start
+        audioSource.time = start;
 
         audioSource.Play();
 

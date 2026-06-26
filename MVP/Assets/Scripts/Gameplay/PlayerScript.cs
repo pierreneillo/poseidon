@@ -42,6 +42,12 @@ public class PlayerScript : MonoBehaviour
 	public ProjectileBehaviour Projectile;
 	public Transform LaunchOffset;
 
+	// Sound
+  	[SerializeField] protected AudioClip[] splassingSounds;
+	protected float _splassTimer = 0;
+  	[SerializeField] protected AudioClip[] pacesRunning;
+	protected float _paceTimer = 0;
+
 	[Header("VFX Feedback")]
 	[SerializeField] private ParticleSystem smokeParticleSystem;
 	private float _burnIntensity;
@@ -214,7 +220,23 @@ public class PlayerScript : MonoBehaviour
 	{
 		if (Time.timeScale == 0f) return;
 		if (!_isThrowing) _rb.linearVelocityX = _hSpeed;
-		else _rb.linearVelocityX = 0;
+		else {
+			_rb.linearVelocityX = 0;
+			if (_splassTimer < Time.time && true){		// TO DO: CHANGE TRUE WITH CRITERIA FOR STOPPING WATER
+				int rand = UnityEngine.Random.Range(0,splassingSounds.Length);
+				AudioClip clipToPlay = splassingSounds[rand];
+				SoundManager.instance.PlaySplass(clipToPlay,transform, 0.7f);
+				_splassTimer = Time.time + 0.5f;
+			}
+		}
+
+		if ((_hSpeed != 0) && _grounded && _paceTimer < Time.time && true){		// Change true with grounded		
+			int rand = UnityEngine.Random.Range(0,pacesRunning.Length);
+			AudioClip clipToPlay = pacesRunning[rand];
+			SoundManager.instance.PlayPace(clipToPlay,transform, 0.5f);
+			_paceTimer = Time.time + 0.35f;		// 8 frames over 30 is the duration of one pace
+		}
+
 		Flip(_hSpeed);
 		animator.SetBool("isMoving", (_hSpeed != 0));
 

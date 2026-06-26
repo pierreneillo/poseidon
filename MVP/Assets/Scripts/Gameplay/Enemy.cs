@@ -1,4 +1,5 @@
 using Unity.VisualScripting;
+using System.Collections.Generic;
 using UnityEngine;
 
 public class Enemy : MonoBehaviour
@@ -43,7 +44,7 @@ public class Enemy : MonoBehaviour
   protected Rigidbody2D _rb;
   protected bool _burning;
   protected float _nextHitSoundTime = 0f;
-  protected AudioSource currentVoiceSource;
+  protected List<AudioSource> currentVoiceSources;
 
   public int GPUObstacleID { get; private set; } = -1;
 
@@ -62,7 +63,7 @@ public class Enemy : MonoBehaviour
     hpBarSize = hpBar.transform.localScale;
     fireSize = fire.transform.localScale;
     _burning = true;
-    currentVoiceSource = null;
+    currentVoiceSources = new List<AudioSource>();
 
     if (smokeParticleSystem != null)
     {
@@ -92,14 +93,14 @@ public class Enemy : MonoBehaviour
       // Shout
       if(Time.time >= _nextShoutTime && wantSpeaches){
         AudioClip clipToPlay = ShoutingSounds[randomCaracterSound];
-        currentVoiceSource = SoundManager.instance.PlayVoice(clipToPlay,transform, 0.5f);
+        currentVoiceSources.Add(SoundManager.instance.PlayVoice(clipToPlay,transform, 0.8f));
         _nextShoutTime = Time.time + clipToPlay.length + shoutCooldown;
       }
       // Burning
       if(Time.time >= _nextBurningTime){
         int randomFireSound = Random.Range(0, fireSound.Length);
         AudioClip clipToPlay = fireSound[randomFireSound];
-        SoundManager.instance.PlayBurningSound(clipToPlay,transform, 0.5f);
+        currentVoiceSources.Add(SoundManager.instance.PlayBurningSound(clipToPlay,transform, 0.8f));
         _nextBurningTime = Time.time + clipToPlay.length - 0.1f;
       }
       
@@ -165,10 +166,10 @@ public class Enemy : MonoBehaviour
         _burning = false;
 
         // Sound Design
-        if (currentVoiceSource != null) 
-        {
-          Destroy(currentVoiceSource.gameObject);
+        for (int i = 0 ; i < currentVoiceSources.Count ; i++){
+          Destroy(currentVoiceSources[i].gameObject);
         }
+        currentVoiceSources = new List<AudioSource>();
         
         if (wantSpeaches){
           SoundEnnemiVoiceAnecdote localAnecdote = GetComponentInChildren<SoundEnnemiVoiceAnecdote>();
