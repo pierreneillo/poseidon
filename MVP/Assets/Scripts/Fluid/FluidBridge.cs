@@ -140,6 +140,13 @@ public class FluidBridge : MonoBehaviour
         if (id > 0 && id < max_obstacles) activeObstacles[id] = null;
     }
 
+    void Awake() {
+        waterSources.Clear();
+        System.Array.Clear(activeObstacles, 0, activeObstacles.Length);
+        currentCount = 1;
+        everlastingParticleCount = 0;
+    }
+
     void OnEnable()
     {
         if (throwWaterAction != null)
@@ -184,9 +191,11 @@ public class FluidBridge : MonoBehaviour
                 everlastingWater[i].position = new Vector2(waterSource.transform.position.x, waterSource.transform.position.y) + waterSource.getSpawnRadius() * Random.insideUnitCircle;
                 everlastingWater[i].velocity = Vector2.zero;
             }
+            float[] creationTime = new float[currentParticleCount];
+            System.Array.Fill(creationTime, 0f);
 
             particleBuffer.SetData(everlastingWater, 0, (int)everlastingParticleCount, (int)currentParticleCount);
-
+            creationTimeBuffer.SetData(creationTime, 0, (int)everlastingParticleCount, (int)currentParticleCount);
             everlastingParticleCount += currentParticleCount;
         }
         particleCount = everlastingParticleCount;
@@ -528,31 +537,34 @@ public class FluidBridge : MonoBehaviour
                 if (request.hasError || !Application.isPlaying) { isWaitingForFeedback = false; return; }
 
                 var nativeArray = request.GetData<uint>();
+                
+                try {
+                    // Heal player
+                    player.healPlayer(nativeArray[0]);
 
-                // Heal player
-                player.healPlayer(nativeArray[0]);
-
-                // Damage enemies
-                for (int i = 1; i < max_obstacles; i++)
-                {
-                    if (activeObstacles[i] != null) {
-                        uint hits = nativeArray[i];
-                        activeObstacles[i].GenerateSteam(hits);
-                        if (hits > 0)
-                        {
-                            // Damage enemy
-                            UnityEngine.Debug.Log($"Enenmy {i} touched");
-                            if (activeObstacles[i].InflictDamage(hits))
+                    // Damage enemies
+                    for (int i = 1; i < max_obstacles; i++)
+                    {
+                        if (activeObstacles[i] != null) {
+                            uint hits = nativeArray[i];
+                            activeObstacles[i].GenerateSteam(hits);
+                            if (hits > 0)
                             {
-                                activeObstacles[i] = null;
+                                // Damage enemy
+                                UnityEngine.Debug.Log($"Enenmy {i} touched");
+                                if (activeObstacles[i].InflictDamage(hits))
+                                {
+                                    activeObstacles[i] = null;
+                                }
                             }
                         }
                     }
-                }
 
-                System.Array.Clear(feedbackData, 0, feedbackData.Length);
-                collisionFeedbackBuffer.SetData(feedbackData);
-                isWaitingForFeedback = false;
+                    System.Array.Clear(feedbackData, 0, feedbackData.Length);
+                    collisionFeedbackBuffer.SetData(feedbackData);
+                } finally {
+                    isWaitingForFeedback = false;
+                }
             });
         }
     }

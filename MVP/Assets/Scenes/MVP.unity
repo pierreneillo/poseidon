@@ -5129,11 +5129,11 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1558764863944139187, guid: 4626db39f6b668049b7806ef6a258e90, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 76
+      value: 76.65
       objectReference: {fileID: 0}
     - target: {fileID: 1558764863944139187, guid: 4626db39f6b668049b7806ef6a258e90, type: 3}
       propertyPath: m_LocalPosition.y
-      value: 3.8
+      value: 5.27
       objectReference: {fileID: 0}
     - target: {fileID: 1558764863944139187, guid: 4626db39f6b668049b7806ef6a258e90, type: 3}
       propertyPath: m_LocalPosition.z
@@ -5166,6 +5166,10 @@ PrefabInstance:
     - target: {fileID: 1558764863944139187, guid: 4626db39f6b668049b7806ef6a258e90, type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3523632633341287414, guid: 4626db39f6b668049b7806ef6a258e90, type: 3}
+      propertyPath: spawnRadius
+      value: 1.5
       objectReference: {fileID: 0}
     - target: {fileID: 3523632633341287414, guid: 4626db39f6b668049b7806ef6a258e90, type: 3}
       propertyPath: nbOfParticles

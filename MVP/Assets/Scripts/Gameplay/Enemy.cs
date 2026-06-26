@@ -166,8 +166,12 @@ public class Enemy : MonoBehaviour
         _burning = false;
 
         // Sound Design
-        for (int i = 0 ; i < currentVoiceSources.Count ; i++){
-          Destroy(currentVoiceSources[i].gameObject);
+        for (int i = 0 ; i < currentVoiceSources.Count ; i++)
+        {
+            if (currentVoiceSources[i] != null) 
+            {
+                Destroy(currentVoiceSources[i].gameObject);
+            }
         }
         currentVoiceSources = new List<AudioSource>();
         
@@ -176,8 +180,9 @@ public class Enemy : MonoBehaviour
           if (localAnecdote != null) {
             localAnecdote.wantVoice = true;
             localAnecdote.isSafe = true;
+            // SÉCURITÉ : Évite un crash si tu as moins d'anecdotes que de sons de cris
             if (AnecdoteSounds != null && AnecdoteSounds.Length > 0) {
-              localAnecdote.sound = AnecdoteSounds[randomCaracterSound];
+              localAnecdote.sound = AnecdoteSounds[randomCaracterSound % AnecdoteSounds.Length];
             }
           }
         }
