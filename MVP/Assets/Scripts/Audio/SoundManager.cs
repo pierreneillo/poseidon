@@ -36,7 +36,7 @@ public class SoundManager : MonoBehaviour
     public void PlayVoice(AudioClip audioClip, Transform spawnTransform, float volume)
     {
         // On autorise les voix multiples, on ne détruit plus rien ici !
-        CreateAudioSource("VoiceSound", audioClip, spawnTransform, volume);
+        return CreateAudioSource("VoiceSound", audioClip, spawnTransform, volume);
     }
 
     public void PlayFireSound(AudioClip audioClip, Transform spawnTransform, float volume)

@@ -41,6 +41,7 @@ public class Enemy : MonoBehaviour
   protected Rigidbody2D _rb;
   protected bool _burning;
   protected float _nextHitSoundTime = 0f;
+  protected AudioSource currentVoiceSource;
 
   public int GPUObstacleID { get; private set; } = -1;
 
@@ -55,6 +56,7 @@ public class Enemy : MonoBehaviour
     hpBarSize = hpBar.transform.localScale;
     fireSize = fire.transform.localScale;
     _burning = true;
+    currentVoiceSource = null;
 
     if (smokeParticleSystem != null)
     {
@@ -81,7 +83,7 @@ public class Enemy : MonoBehaviour
       // Sound
       if(Time.time >= _nextShoutTime && _burning && wantSpeaches){
         AudioClip clipToPlay = ShoutingSounds[randomCaracterSound];
-        SoundManager.instance.PlayVoice(clipToPlay,transform, 0.5f);
+        currentVoiceSource = SoundManager.instance.PlayVoice(clipToPlay,transform, 0.5f);
         _nextShoutTime = Time.time + clipToPlay.length + shoutCooldown;
       }
       
@@ -146,7 +148,10 @@ public class Enemy : MonoBehaviour
         _burning = false;
 
         // Sound Design
-        // if (SoundManager.instance != null) SoundManager.instance.KillSounds();
+        if (currentVoiceSource != null) 
+        {
+          Destroy(currentVoiceSource.gameObject);
+        }
         
         if (wantSpeaches){
           SoundEnnemiVoiceAnecdote localAnecdote = GetComponentInChildren<SoundEnnemiVoiceAnecdote>();
