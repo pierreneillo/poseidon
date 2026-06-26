@@ -33,7 +33,7 @@ public class SoundManager : MonoBehaviour
         backgroundSound = CreateLoopSoundBackground("BackgroundSound", audioClip, volume);
     }
 
-    public void PlayVoice(AudioClip audioClip, Transform spawnTransform, float volume)
+    public AudioSource PlayVoice(AudioClip audioClip, Transform spawnTransform, float volume)
     {
         // On autorise les voix multiples, on ne détruit plus rien ici !
         return CreateAudioSource("VoiceSound", audioClip, spawnTransform, volume);
